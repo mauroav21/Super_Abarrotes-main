@@ -2,15 +2,15 @@
 Programa de gestión de inventario y punto de venta para una tienda de abarrotes
 
 
-#PASO A PASO
+# PASO A PASO
 
-Instalar XAMPP
+1. Instalar XAMPP
 
 Levantar una base de datos con el nombre de: super_abarrotes
 
 (Archivo SQL incluido en el main)
 
-Abrir una consola en la carpeta main
+2. Abrir una consola en la carpeta main
 
 colocar lo siguiente
 
