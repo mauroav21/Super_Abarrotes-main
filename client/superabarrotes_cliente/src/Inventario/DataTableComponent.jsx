@@ -15,6 +15,7 @@ function DataTableComponent({searchTerm}) {
   const [openModal, setOpenModal] = useState(false);
   const [openModalDelete, setOpenModalDelete] = useState(false);
   const [selectedCodigo, setSelectedCodigo] = useState(null);
+  //const [searchTerm, setSearchTerm] = useState("");  // esto hay que quitrlo si no lo arreglo
   const customStyles = {
     headRow: {
       style: {
@@ -72,17 +73,21 @@ function DataTableComponent({searchTerm}) {
 
   useEffect(() => {
     if (searchTerm) {
-      setFilteredData(data.filter((item) => {
-        return (
-          item.nombre.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1 ||  
-          item.codigo.indexOf(searchTerm) !== -1
-        );
-      }));
+      setFilteredData(
+        data.filter((item) => {
+          const nombre = String(item.nombre || "").toLowerCase();
+          const codigo = String(item.codigo || ""); // 👈 conversión segura a texto
+          const term = searchTerm.toLowerCase();
+
+          return (
+            nombre.includes(term) || codigo.includes(term)
+          );
+        })
+      );
     } else {
       setFilteredData(data);
     }
   }, [data, searchTerm]);
-
 
 
   const columns = [
@@ -114,13 +119,13 @@ function DataTableComponent({searchTerm}) {
       data={filteredData && filteredData.length >= 0 ? filteredData : data} 
       noDataComponent="Producto no disponible"
       defaultSortFieldId={1}
-      pagination
+      //pagination
       responsive
       aginationPerPage={5}
       fixedHeader
       fixedHeaderScrollHeight="50%"
       customStyles={customStyles}
-      paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
+      //paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
     />
 
     {openModal && <ModificacionProductosModal closeModal={() => setOpenModal(false)} codigo={selectedCodigo}/>}

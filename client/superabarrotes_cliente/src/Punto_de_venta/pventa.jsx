@@ -17,6 +17,8 @@ import Logout from '../Logout'
 import PropTypes from 'prop-types';
 import toast, { Toaster } from 'react-hot-toast';
 import AddProduct  from './addProduct';
+import './modal.css';
+
 
 
 class Pventa extends Component { 
@@ -48,7 +50,35 @@ class Pventa extends Component {
         console.log("hola")
         console.log(this.state.selectedProduct);
       }
-      
+
+      // --- Manejo del Corte de Caja ---
+      handleCorteCaja = async () => {
+        try {
+          const response = await axios.get('http://localhost:8081/corte-caja-dia', {
+            withCredentials: true,
+          });
+          // Suponiendo que response.data tiene { fecha: "...", total: ... }
+          const corteResumido = {
+            fecha: response.data.fecha,
+            total: response.data.totalDia
+          };
+          this.setState({ corteData: corteResumido }); // Guardamos solo lo necesario
+          toast.success('Corte de caja diario generado.');
+        } catch (error) {
+          console.error(error);
+          toast.error('Error al obtener el corte de caja.');
+        }
+      };
+
+      // --- Abrir modal ---
+      openModal = async () => {
+        this.setState({ showModal: true, corteData: null }, this.handleCorteCaja);
+      };
+
+
+      closeModal = () => {
+        this.setState({ showModal: false, corteData: null });
+      };
 
       async componentDidMount() {
         console.log('Component Mounted, isAuthenticated prop:', this.state.isAuthenticated);
@@ -81,7 +111,7 @@ class Pventa extends Component {
       openNavbar() {
           if (this.sidenav.current && this.storeButton.current && this.ui.current) {
             this.sidenav.current.style.width = '300px';
-            this.sidenav.current.style.background = `url(${tienda_bg}), #9B1313`;
+            this.sidenav.current.style.background = `url(${tienda_bg}), #12274B`;
             this.sidenav.current.style.backgroundPosition = 'left 5%';
             this.sidenav.current.style.backgroundPositionX = 'center';
             this.sidenav.current.style.backgroundSize = '350%';
@@ -96,7 +126,7 @@ class Pventa extends Component {
         closeNavbar() {
           if (this.sidenav.current && this.storeButton.current && this.ui.current) {
             this.sidenav.current.style.width = '60%';
-            this.sidenav.current.style.background = '#9B1313';
+            this.sidenav.current.style.background = '#12274B';
             this.storeButton.current.style.marginLeft = '10%';
             this.ui.current.onclick = null;
             this.sidenavmenu.current.style.display = 'none';
@@ -139,6 +169,12 @@ class Pventa extends Component {
                           <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/usuarios')} >
                               <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}} /> <span>Administración de Usuarios</span>
                           </li>
+                          <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/proveedores')} >
+                              <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}} /> <span>Administración de Proveedores</span>
+                          </li>
+                          <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/corte_de_caja')} >
+                              <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}} /> <span>Corte de Caja</span>
+                          </li>
                           <li className="menu-item">
                               <img src={logoutIcon} className="imageIcon" alt="Cerrar Sesión"/> <Logout/>
                           </li>
@@ -172,6 +208,23 @@ class Pventa extends Component {
                 <div>
                 </div>
           }
+                          {this.state.showModal && (
+                  <div className="modalBackground">
+                    <div className="modalContainer">
+                      <div className="header">Corte de Caja Diario</div>
+                      <div className="forms">
+                        {this.state.corteData ? (
+                          <pre className="labelModal">{JSON.stringify(this.state.corteData, null, 2)}</pre>
+                        ) : (
+                          <div className="labelModal">Generando corte...</div>
+                        )}
+                      </div>
+                      <div id="buttons">
+                        <button id="acceptButton" onClick={this.closeModal}>Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             );
           }
