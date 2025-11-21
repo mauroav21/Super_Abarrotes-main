@@ -1,8 +1,8 @@
 import  { Component, createRef } from 'react';
-import './Inventario.css';
+import '../Inventario/Inventario.css';
 import tienda from '../assets/inventario/tienda.svg';
 import comercial from '../assets/inventario/SuperAbarrotes.svg';
-import inventario from '../assets/inventario/inventarioo.svg';
+import proveedores_logo from '../assets/proveedores/proveedores.svg';
 import inventario_icon from '../assets/inventario/inventario_icon.svg'
 import usericon from '../assets/inventario/user.svg'
 import usuarios from '../assets/inventario/usuarios.svg'
@@ -14,27 +14,25 @@ import DataTableComponent from './DataTableComponent';
 import GetUser from '../GetUser';
 import axios from 'axios';
 import Logout from '../Logout'
-import AltaProductos from './AltaProductos';
+import AltaProveedores from './AltaProveedores';
 import PropTypes from 'prop-types';
-import ListaDeFaltantes from './ListaDeFaltantes';
 import toast, { Toaster } from 'react-hot-toast';
 
 
-class Inventario extends Component {
+class Admin_provedores extends Component {
   constructor(props) {
     super(props);
-    
     this.sidenav = createRef();
     this.storeButton = createRef();
     this.ui = createRef();
     this.sidenavmenu = createRef();
     this.state = {
       isAuthenticated: false,
-      searchTerm: "",
+      rol: null,
+      user: null
   };
     this.openNavbar = this.openNavbar.bind(this);
     this.closeNavbar = this.closeNavbar.bind(this);
-    this.handleSearchChange = this.handleSearchChange.bind(this); 
   }
 
   async componentDidMount() {
@@ -57,15 +55,12 @@ class Inventario extends Component {
 
       } else {
         this.setState({ isAuthenticated: true});
+        this.setState({ rol: res.data.rol });
         console.log("verified");
       }
     } catch (error) {
       console.error('Error verifying user', error);
     }
-  }
-
-  handleSearchChange(event) {
-    this.setState({ searchTerm: event.target.value });
   }
 
   openNavbar() {
@@ -100,13 +95,11 @@ class Inventario extends Component {
   }
 
   render() {
-
-    return (
-      <>
-      {
-        this.state.isAuthenticated ?(
-          <div id="screen">
-            <Toaster/>
+    if (this.state.rol && this.state.rol === 'Operario' && this.state.isAuthenticated === true) {
+      return (
+        <>
+         <div id="screen">
+          <Toaster />
           <div id="sidenavbar">
             <div className="sidenav" id="mySidenav" ref={this.sidenav}>
               <img
@@ -122,15 +115,15 @@ class Inventario extends Component {
                   <li className="menu-item"  onClick={() => window.location.replace('/punto_de_venta')}>
                       <img src={pventa}  alt="Punto de Venta" style={{width: "25%"}}/> <span>Punto de Venta</span>
                   </li>
-                  <li className="menu-item" style={{paddingLeft: "22px"}} onClick={this.closeNavbar}>
+                  <li className="menu-item" style={{paddingLeft: "22px"}} onClick={() => window.location.replace('/inventario')}>
                       <img src={inventario_icon} className="imageIcon" alt="Inventario" style={{width: "25%"}}/> <span>Inventario</span>
 
                   </li>
                   <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/usuarios')} >
                       <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}} /> <span>Administración de Usuarios</span>
                   </li>
-                  <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/proveedores')} >
-                      <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}} /> <span>Administración de Proveedores</span>
+                  <li className="menu-item" style={{paddingLeft: "19px"}} onClick={this.closeNavbar} >
+                      <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}}  /> <span>Administración de Proveedores</span>
                   </li>
                   <li className="menu-item">
                       <img src={logoutIcon} className="imageIcon" alt="Cerrar Sesión"/> <Logout/>
@@ -142,7 +135,7 @@ class Inventario extends Component {
           </div>
           <div className="ui" id="ui" ref={this.ui}>
             <div id="header">
-              <img src={inventario} id="logoInventario"></img>
+              <img src={proveedores_logo} id="logoProveedores"></img>
             </div>
             <div id="headbar">
               <div id="userinfo">
@@ -151,19 +144,69 @@ class Inventario extends Component {
                 <GetUser></GetUser>
                 </div>
               </div>
-              <div id='buscarDiv'>
-                <p style={{color:'black',fontSize:'120%',marginBottom:'0',marginTop:'0'}}>Buscar Inventario</p>
-                <input id='inputBuscar' placeholder='Nombre o código del producto'
-                 value={this.state.searchTerm} 
-                 onChange={this.handleSearchChange}
-                 ></input>
-              </div>
               <div id='opciones'>
-              <AltaProductos/>
-              <ListaDeFaltantes/>
               </div>
             </div>
-              <DataTableComponent searchTerm={this.state.searchTerm}></DataTableComponent>
+              <p id="noPermisos" style={{color: 'black', fontWeight: '800', fontSize: '300%'}}>Error: No tienes permisos para acceder a esta sección</p>
+          </div>
+        </div>
+        </>
+      )
+    }
+    return (
+      <>
+      {
+        this.state.isAuthenticated ?(
+          <div id="screen">
+            <Toaster />
+          <div id="sidenavbar">
+            <div className="sidenav" id="mySidenav" ref={this.sidenav}>
+              <img
+                src={tienda}
+                id="tienda"
+                ref={this.storeButton}
+                onClick={this.openNavbar}
+                alt="Store Icon"
+              />
+              <div className="sidenavmenu" ref={this.sidenavmenu}>
+                <img src={comercial} alt="Comercial Icon" id="logo"/>
+                <ul className="menu">
+                  <li className="menu-item"  onClick={() => window.location.replace('/punto_de_venta')}>
+                      <img src={pventa}  alt="Punto de Venta" style={{width: "25%"}}/> <span>Punto de Venta</span>
+                  </li>
+                  <li className="menu-item" style={{paddingLeft: "22px"}} onClick={() => window.location.replace('/inventario')}>
+                      <img src={inventario_icon} className="imageIcon" alt="Inventario" style={{width: "25%"}}/> <span>Inventario</span>
+                  </li>
+                  <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/usuarios')} >
+                      <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}}  /> <span>Administración de Usuarios</span>
+                  </li>
+                  <li className="menu-item" style={{paddingLeft: "19px"}} onClick={this.closeNavbar} >
+                      <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}}  /> <span>Administración de Proveedores</span>
+                  </li>
+                  <li className="menu-item">
+                      <img src={logoutIcon} className="imageIcon" alt="Cerrar Sesión"/> <Logout/>
+                  </li>
+              </ul>    
+                <Link to="/login">  </Link>
+              </div>
+            </div>
+          </div>
+          <div className="ui" id="ui" ref={this.ui}>
+            <div id="header">
+              <img src={proveedores_logo} id="logoProveedores"></img>
+            </div>
+            <div id="headbar">
+              <div id="userinfo">
+                <img src={usericon}/>
+                <div id="username">
+                <GetUser></GetUser>
+                </div>
+              </div>
+              <div id='opciones'>
+              <AltaProveedores/>
+              </div>
+            </div>
+              <DataTableComponent></DataTableComponent>
           </div>
         </div>
         )
@@ -175,8 +218,8 @@ class Inventario extends Component {
     );
   }
 }
-Inventario.propTypes = {
+Admin_provedores.propTypes = {
   navigate: PropTypes.func.isRequired,
 };
 
-export default Inventario;
+export default Admin_provedores;

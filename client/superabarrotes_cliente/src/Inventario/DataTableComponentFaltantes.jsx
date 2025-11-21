@@ -62,13 +62,13 @@ function DataTableComponentFaltantes() {
       data={data} 
       noDataComponent="Producto no disponible"
       defaultSortFieldId={1}
-      pagination
+      //pagination
       responsive
       aginationPerPage={5}
       fixedHeader
       fixedHeaderScrollHeight="50%"
       customStyles={customStyles}
-      paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
+      //paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
     />
 
     {openModal && <ModificacionProductosModal closeModal={() => setOpenModal(false)} />}

@@ -1,0 +1,49 @@
+/* Contenedor principal de la UI con scroll */
+.ui {
+  margin-top: 0;
+  min-width: 85%;
+  max-width: 85%;
+  margin-left: 5%;
+  height: calc(100vh - 60px); /* Ajusta según header */
+  overflow-y: auto; /* Habilita scroll vertical */
+  background-color: #e9eef2;
+  padding: 20px;
+}
+
+/* Información del corte */
+.corte-info {
+  background-color: #ffffff;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: black;
+}
+
+/* Cada venta como un card */
+.venta-card {
+  background-color: #ffffff;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: black;
+}
+
+/* Títulos de cada venta */
+.venta-card h3 {
+  color: #12274B; /* Azul corporativo */
+  margin-bottom: 10px;
+}
+
+/* Lista de productos dentro de la venta */
+.venta-card ul {
+  list-style: disc;
+  margin-left: 20px;
+}
+
+/* Opcional: scroll interno para tablas si hay muchas columnas */
+.data-table-wrapper {
+  margin-top: 10px;
+  overflow-x: auto;
+}
