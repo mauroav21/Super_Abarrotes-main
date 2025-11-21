@@ -166,6 +166,10 @@ class Pventa extends Component {
                               <img src={inventario_icon} className="imageIcon" alt="Inventario" style={{width: "25%"}}/> <span>Inventario</span>
         
                           </li>
+                            <li className="menu-item" style={{paddingLeft: "22px"}} onClick={() => window.location.replace('/compras')}>
+                            <img src={inventario_icon} className="imageIcon" alt="Compras" style={{width: "25%"}}/> <span>Compras</span>
+        
+                          </li>
                           <li className="menu-item" style={{paddingLeft: "19px"}} onClick={() => window.location.replace('/usuarios')} >
                               <img src={usuarios} className="imageIcon" alt="Messages" style={{width: "25%"}} /> <span>Administración de Usuarios</span>
                           </li>
