@@ -6,6 +6,8 @@ import Pventa from './Punto_de_venta/pventa.jsx';
 import Faltantes from './Inventario/Faltantes.jsx';
 import Usuarios from './Usuarios/admin_usuarios.jsx';
 import Compras from './Compras/Compras.jsx';
+import Proveedores from './Proveedores/Admin_proveedores.jsx';
+import CorteCaja from './Corte_de_caja/CorteCaja.jsx';
 
 function App() {
  return(
@@ -18,6 +20,8 @@ function App() {
        <Route path="/faltantes" element={<Faltantes />} />
        <Route path="/usuarios" element={<Usuarios />} />
        <Route path="/compras" element={<Compras />} />
+       <Route path="/proveedores" element={<Proveedores />} />
+       <Route path="/corte_de_caja" element={<CorteCaja />} />
 
 
      </Routes>

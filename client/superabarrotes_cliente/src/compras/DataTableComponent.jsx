@@ -3,9 +3,9 @@ import DataTable from 'react-data-table-component';
 import axios from 'axios';
 import delIcon from '../assets/inventario/-.svg'
 import PropTypes from 'prop-types';
-import CobrarModal from './CobrarModal';
+import CobrarModal from './RegistrarCompraModal';
 import toast, { Toaster } from 'react-hot-toast';
-import './Modal.css';
+import './Modal.css'
 import papelera from '../assets/pventa/papelera.png'
 import ConfirmacionModal from './ConfirmacionModal';
 
@@ -144,31 +144,12 @@ function DataTableComponent({searchTerm}) {
 
   const columns = [
     { name: 'Producto', selector: (row) => row.nombre },
-    { name: 'Cantidad', 
-  selector: (row) => row.cantidad, 
-  cell: (row) => (
-    <div>
-      <button style={{backgroundColor: 'white', color: 'gray', fontSize: '150%', fontWeight: 'bolder', borderColor: 'white'}} onClick={() => decreaseCantidad(row)}>-</button>
-
-      <input 
-        type="number" 
-        value={row.cantidad} 
-        min={1}
-        max={row.inventario}
-        style={{ width: '40px', textAlign: 'center' }}
-        onChange={(e) => {
-          let value = parseInt(e.target.value, 10);
-          if (isNaN(value) || value < 1) value = 1;
-          if (value > row.inventario) value = row.inventario;
-          setData(prevData => prevData.map(item =>
-            item.codigo === row.codigo ? { ...item, cantidad: value } : item
-          ));
-        }}
-      />
-
-      <button style={{backgroundColor: 'white', color: 'gray', fontSize: '150%', fontWeight: 'bolder', borderColor: 'white'}} onClick={() => increaseCantidad(row)}>+</button>
-    </div>
-  ) },
+    { name: 'Cantidad', selector: (row) => row.cantidad, cell: (row) =>
+        <div>
+            <button style={{backgroundColor: 'white', color: 'gray', fontSize: '150%', fontWeight: 'bolder', borderColor: 'white'}} onClick={() => decreaseCantidad(row)}>-</button>{row.cantidad} 
+            <button style={{backgroundColor: 'white', color: 'gray', fontSize: '150%', fontWeight: 'bolder', borderColor: 'white'}} onClick={() => increaseCantidad(row)}>+</button>
+        </div>
+    },
     { name: 'Precio', selector: (row) => row.precio },
     { name: 'Subtotal', selector: (row) => row.precio * row.cantidad },
     {
@@ -194,14 +175,13 @@ function DataTableComponent({searchTerm}) {
         data={data} 
         noDataComponent="Producto no disponible"
         defaultSortFieldId={1}
-        //pagination
+        pagination
         responsive
         aginationPerPage={5}
         fixedHeader
         fixedHeaderScrollHeight="50%"
         customStyles={customStyles}
-        //paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
-        
+        paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
       />
       <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '20px'}}>
         <button id='cancelButton' onClick={() => handleCobrar()} style={{minWidth: '10%', fontSize: '115%'}}>Cobrar</button>

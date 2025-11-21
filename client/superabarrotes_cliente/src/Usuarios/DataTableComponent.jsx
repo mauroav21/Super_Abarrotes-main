@@ -147,13 +147,13 @@ function DataTableComponent() {
       data={data} 
       noDataComponent="No hay usuarios"
       defaultSortFieldId={1}
-      pagination
+      //pagination
       responsive
       aginationPerPage={5}
       fixedHeader
       fixedHeaderScrollHeight="50%"
       customStyles={customStyles}
-      paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
+      //paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
     />
 
     {openModal && <ModificacionUsuariosModal closeModal={() => setOpenModal(false)} usuario={selectedUsuario}/>}

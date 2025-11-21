@@ -31,11 +31,11 @@ function AddProduct({ onProductSelect }) {
   };
 
   const handleSelectChange = (option) => {
-    setSelectedOption(option); // mantener la selección
+    setSelectedOption(null);
     if (onProductSelect) {
-      onProductSelect(option); // avisar a Pventa
+      onProductSelect(option);
     } 
-};
+  };
 
   const handleProductSelect = (selectedOption) => {
     this.setSelectedOption(selectedOption);

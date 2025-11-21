@@ -48,7 +48,7 @@ import express from 'express';
 import mysql2 from 'mysql2';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt, { compareSync } from 'bcrypt';
 import cookieParser from 'cookie-parser';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
@@ -78,7 +78,7 @@ const db = mysql2.createConnection({
     host:"localhost",
     user:"root",
     //password:"superAbarrotes",
-    database:"super_abarrotes"
+    database:"superabarrotes"
 })
 
 db.connect((err) => {
@@ -92,7 +92,7 @@ db.connect((err) => {
 app.post('/register_user', (req, res) => {
     const sql = "INSERT INTO trabajadores(`nombre`,`apellido_paterno`,`apellido_materno`,`usuario`,`contrasena`,`rol`) VALUES (?)";
     const sql_select = "SELECT * from trabajadores where usuario=?";
-    const sql_password = "INSERT INTO contrasenas(`encriptada`,`texto_plano`) VALUES (?,?)";
+    const sql_password = "INSERT INTO contrasena(`encriptada`,`texto_plano`) VALUES (?,?)";
     const values = [req.body.usuario.toLowerCase()];
     db.query(sql_select, values, (err, data) => {
         if(err) return res.json({Error: "Error al buscar el usuario"});
@@ -124,7 +124,7 @@ app.post('/register_user', (req, res) => {
 
 app.post('/update_user', (req, res) => {
     const sql = "UPDATE trabajadores SET nombre=?, apellido_paterno=?, apellido_materno=?, contrasena=?, rol=? WHERE usuario=?";
-    const password_replace = "UPDATE  contrasenas SET encriptada=?, texto_plano=? WHERE encriptada=(SELECT contrasena from trabajadores WHERE usuario=?)";
+    const password_replace = "UPDATE  contrasena SET encriptada=?, texto_plano=? WHERE encriptada=(SELECT contrasena from trabajadores WHERE usuario=?)";
     bcrypt.hash(req.body.contrasena, salt, (err, hash) => {
         if(err)return res.json({Error: "Error al encriptar la contraseña"});
         const values = [req.body.nombre.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase()), 
@@ -303,16 +303,22 @@ app.get('/data', (req, res) => {
     });
   });
 
-  app.get('/data_usuarios', (req, res) => {
-    db.query('SELECT usuario, nombre, apellido_paterno, apellido_materno, rol, texto_plano, contrasena FROM trabajadores,contrasenas WHERE encriptada=contrasena', (error, results, fields) => {
-      if (error) {
+app.get('/data_usuarios', (req, res) => {
+    const sql = `
+        SELECT usuario, contrasena, rol, nombre, apellido_paterno, apellido_materno 
+        FROM trabajadores
+    `;
+
+    db.query(sql, (error, results) => {
+        if (error) {
         console.error('Database query error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
         return;
-      }
-      res.json(results); 
+        }
+        res.json(results); // Devuelve un array de usuarios
     });
-  });
+});
+
 
 app.get('/GetProducto/:codigo', (req, res) => {
     const codigo = req.params.codigo;
@@ -407,7 +413,7 @@ app.get('/GetUser', (req, res) => {
 
 app.get('/GetUserData/:user', (req, res) => {  
     const usuario_completo = req.params.user;
-    const sql = 'SELECT * from trabajadores, contrasenas WHERE contrasena=encriptada AND usuario = ?';
+    const sql = 'SELECT * from trabajadores, contrasena WHERE contrasena=encriptada AND usuario = ?';
 
     db.query(sql, [usuario_completo], (err, results) => {
         if (err) {
@@ -545,6 +551,229 @@ router.post('/api/compras', (req, res) => {
 
 
 
+// CORTE DE CAJA con detalle de productos
+app.get('/corte-caja-dia', async (req, res) => {
+  try {
+    const [ventas] = await db.promise().query(
+      `SELECT v.num_venta, v.fecha, v.usuario, v.total, p.nombre, v.cantidad, v.total/v.cantidad AS precioUnitario
+       FROM ventas v
+       JOIN productos p ON v.producto = p.codigo
+       WHERE DATE(v.fecha) = CURDATE()`
+    );
+
+    const ventasMap = {};
+
+    ventas.forEach(v => {
+      if (!ventasMap[v.num_venta]) {
+        ventasMap[v.num_venta] = {
+          num_venta: v.num_venta,
+          fecha: v.fecha,
+          usuario: v.usuario,
+          total: parseFloat(v.total) || 0,
+          productos: []
+        };
+      }
+      ventasMap[v.num_venta].productos.push({
+        nombre: v.nombre,
+        cantidad: v.cantidad,
+        precioUnitario: parseFloat(v.precioUnitario) || 0
+      });
+    });
+
+    const ventasProcesadas = Object.values(ventasMap);
+
+    const totalDia = ventasProcesadas.reduce((acc, v) => acc + v.total, 0);
+
+    res.json({
+      fecha: new Date().toISOString().slice(0,10),
+      totalDia,
+      ventas: ventasProcesadas
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ Error: "Ocurrió un error obteniendo el corte de caja" });
+  }
+});
+
+
+
+
+// ================================================
+// ================ PROVEEDORES ===================
+// ================================================
+
+// --- Obtener todos los proveedores ---
+app.get('/data_proveedores', (req, res) => {
+    const sql = 'SELECT codigo, nombre, telefono, correo FROM proveedores ORDER BY nombre ASC';
+    db.query(sql, (error, results) => {
+        if (error) {
+            console.error('Error al obtener proveedores:', error);
+            return res.status(500).json({ Error: 'Error interno del servidor' });
+        }
+        res.json(results);
+    });
+});
+
+// --- Obtener un proveedor por código ---
+app.get('/GetProveedor/:codigo', (req, res) => {
+    const { codigo } = req.params;
+    const sql = 'SELECT * FROM proveedores WHERE codigo = ?';
+    db.query(sql, [codigo], (err, result) => {
+        if (err) {
+            console.error('Error al buscar el proveedor:', err);
+            return res.status(500).json({ Error: 'Error al buscar el proveedor' });
+        }
+        if (result.length === 0) {
+            return res.status(404).json({ Error: 'Proveedor no encontrado' });
+        }
+        return res.status(200).json({ Status: 'Exito', Proveedor: result[0] });
+    });
+});
+
+// --- Insertar un nuevo proveedor ---
+app.post('/insertarProveedor', (req, res) => {
+    const { codigo, nombre, telefono, correo } = req.body;
+
+    if (!codigo || !nombre) {
+        return res.status(400).json({ Error: "Faltan campos obligatorios (código o nombre)." });
+    }
+
+    const nombre_normalizado = nombre.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+    const sql_check = "SELECT * FROM proveedores WHERE codigo = ? OR nombre = ?";
+    const sql_insert = "INSERT INTO proveedores (codigo, nombre, telefono, correo) VALUES (?, ?, ?, ?)";
+    
+    db.query(sql_check, [codigo, nombre_normalizado], (err, data) => {
+        if (err) {
+            console.error('Error al verificar duplicado:', err);
+            return res.status(500).json({ Error: "Error al verificar el proveedor" });
+        }
+
+        if (data.length > 0) {
+            return res.status(409).json({ Error: "El código o nombre del proveedor ya está registrado" });
+        }
+
+        db.query(sql_insert, [codigo, nombre_normalizado, telefono, correo], (err, result) => {
+            if (err) {
+                console.error('Error al insertar proveedor:', err);
+                return res.status(500).json({ Error: "Error al insertar el proveedor" });
+            }
+            return res.status(200).json({
+                Status: "Exito",
+                message: "Proveedor registrado exitosamente",
+                id_proveedor: result.insertId
+            });
+        });
+    });
+});
+
+// --- Modificar proveedor ---
+app.post('/modificarProveedor', (req, res) => {
+    const { codigo, nombre, telefono, correo } = req.body;
+
+    if (!codigo) {
+        return res.status(400).json({ Error: "El código del proveedor es obligatorio para modificar." });
+    }
+
+    const nombre_normalizado = nombre.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+    const sql_update = "UPDATE proveedores SET nombre = ?, telefono = ?, correo = ? WHERE codigo = ?";
+
+    db.query(sql_update, [nombre_normalizado, telefono, correo, codigo], (err, result) => {
+        if (err) {
+            console.error('Error al modificar proveedor:', err);
+            return res.status(500).json({ Error: "Error al modificar el proveedor" });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ Error: "Proveedor no encontrado" });
+        }
+        return res.status(200).json({ Status: "Exito", message: "Proveedor actualizado exitosamente" });
+    });
+});
+
+// --- Eliminar proveedor ---
+app.delete('/deleteProveedor/:codigo', (req, res) => {
+    const { codigo } = req.params;
+    const sql = 'DELETE FROM proveedores WHERE codigo = ?';
+
+    db.query(sql, [codigo], (err, result) => {
+        if (err) {
+            console.error('Error al eliminar proveedor:', err);
+            return res.status(500).json({ Error: "Error al eliminar el proveedor" });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ Error: "Proveedor no encontrado" });
+        }
+        return res.status(200).json({ Status: "Exito", message: "Proveedor eliminado exitosamente" });
+    });
+});
+
+
+// ================================================
+// ================== COMPRAS =====================
+// ================================================
+
+app.post('/realizarCompra', async (req, res) => {
+    const connection = db.promise();
+
+    try {
+        const { id_proveedor, usuario, total, productos_comprados } = req.body;
+
+        // Validación básica
+        if (!id_proveedor || !usuario || !total || !productos_comprados || productos_comprados.length === 0) {
+            return res.status(400).json({ Error: "Faltan datos requeridos o la lista de productos está vacía." });
+        }
+
+        // Iniciar transacción
+        await connection.query("START TRANSACTION");
+
+        // Insertar registro principal en compras
+        const [compraResult] = await connection.query(
+            "INSERT INTO compras(fecha, total, id_proveedor, usuario) VALUES(CURDATE(), ?, ?, ?)",
+            [total, id_proveedor, usuario]
+        );
+        const id_compra = compraResult.insertId;
+
+        // Iterar productos para detalle y actualizar inventario
+        for (const producto of productos_comprados) {
+            const { codigo, cantidad, precio_compra, subtotal } = producto;
+
+            if (!codigo || !cantidad || !precio_compra || !subtotal) {
+                throw new Error(`Datos incompletos para el producto con código ${codigo}`);
+            }
+
+            // Insertar detalle de compra
+            await connection.query(
+                "INSERT INTO detalle_compras(id_compra, producto, cantidad, precio_compra, subtotal) VALUES(?, ?, ?, ?, ?)",
+                [id_compra, codigo, cantidad, precio_compra, subtotal]
+            );
+
+            // Actualizar inventario
+            await connection.query(
+                "UPDATE productos SET cantidad = cantidad + ? WHERE codigo = ?",
+                [cantidad, codigo]
+            );
+        }
+
+        // Confirmar transacción
+        await connection.query("COMMIT");
+
+        return res.status(200).json({
+            Status: "Exito",
+            message: "Compra registrada y inventario actualizado con éxito",
+            id_compra
+        });
+
+    } catch (err) {
+        // Revertir cambios en caso de error
+        await connection.query("ROLLBACK");
+        console.error("Error en el proceso de compra:", err);
+        return res.status(500).json({ Error: "Ocurrió un error en el proceso de compra.", detail: err.message });
+    }
+});
+
+
+
+
+
 app.listen(8081, () => {
     console.log('Conectado al backend!');
 })
@@ -654,7 +883,8 @@ app.post('/realizarCobro', async (req, res) => {
                 const cantidad_minima = productResult[0].cantidad_minima;
                 if (cantidad_actual - producto.cantidad >= 0) {
                     const sql_insert = "INSERT INTO ventas(num_venta, producto, cantidad, total, fecha, usuario) VALUES(?,?,?,?,?,?)";
-                    const valores = [num_venta, producto.codigo, producto.cantidad, req.body.costo, fechaISO, req.body.username];
+                    const subtotal = producto.precio * producto.cantidad;  // Calcula subtotal del producto
+                    const valores = [num_venta, producto.codigo, producto.cantidad, subtotal, fechaISO, req.body.username];
                     await db.promise().query(sql_insert, valores);
         
                     const sql_update = "UPDATE productos SET cantidad = cantidad - ? WHERE codigo = ?";

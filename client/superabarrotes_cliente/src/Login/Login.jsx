@@ -21,7 +21,7 @@ function Login() {
         axios.post('http://localhost:8081/login', values)
         .then(res => {
             if(res.data.Status==='Exito'){
-              navigate('/inventario');
+              navigate('/punto_de_venta');
             }else{
                 if(res.data.Error.toLowerCase().includes("usuario")){
                   document.getElementById("usererror").innerHTML=res.data.Error;
@@ -55,7 +55,7 @@ function Login() {
         .then((res) => {
           if (res.data?.Status === "Exito") {
             setShowLogin(false);
-            navigate("/inventario");
+            navigate("/punto_de_venta");
           }else{
             setShowLogin(true);
           }
