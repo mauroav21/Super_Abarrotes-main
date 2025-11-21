@@ -11,7 +11,7 @@ const DataTableCompras = ({ items, onEliminar }) => {
           <th>Cantidad</th>
           <th>Precio Unitario</th>
           <th>Subtotal</th>
-          <th>Acción</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>

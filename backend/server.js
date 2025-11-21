@@ -13,25 +13,25 @@
  * - Manejo de CORS y cookies.
  *
  * Rutas principales:
- * - POST   /register_user         : Registrar un nuevo usuario.
- * - POST   /update_user          : Actualizar datos de usuario.
- * - POST   /login                : Autenticación de usuario.
- * - GET    /logout               : Cerrar sesión (elimina cookie JWT).
- * - GET    /                     : Verifica autenticación y devuelve datos del usuario.
- * - GET    /data                 : Obtiene todos los productos.
- * - GET    /dataPventa           : Obtiene productos con existencia > 0.
- * - GET    /dataFaltantes        : Obtiene productos con cantidad menor a la mínima.
- * - GET    /data_usuarios        : Lista usuarios y contraseñas (texto plano y encriptada).
- * - GET    /GetProducto/:codigo  : Obtiene un producto por código.
- * - POST   /insertarProducto     : Inserta un nuevo producto.
- * - POST   /modificarProducto    : Modifica un producto existente.
- * - DELETE /deleteProducto/:codigo: Elimina un producto por código.
- * - DELETE /deleteUsuario/:usuario: Elimina un usuario por nombre de usuario.
- * - GET    /GetUser              : Obtiene datos del usuario autenticado.
- * - GET    /GetUserData/:user    : Obtiene datos completos de un usuario.
- * - POST   /realizarCobro        : Registra una venta y actualiza inventario.
- * - GET    /generar-pdf          : Genera PDF de productos faltantes.
- * - POST   /imprimir-ticket      : Genera PDF de ticket de venta.
+ * - POST    /register_user          : Registrar un nuevo usuario.
+ * - POST    /update_user            : Actualizar datos de usuario.
+ * - POST    /login                  : Autenticación de usuario.
+ * - GET     /logout                 : Cerrar sesión (elimina cookie JWT).
+ * - GET     /                       : Verifica autenticación y devuelve datos del usuario.
+ * - GET     /data                   : Obtiene todos los productos.
+ * - GET     /dataPventa             : Obtiene productos con existencia > 0.
+ * - GET     /dataFaltantes          : Obtiene productos con cantidad menor a la mínima.
+ * - GET     /data_usuarios          : Lista usuarios y contraseñas (texto plano y encriptada).
+ * - GET     /GetProducto/:codigo    : Obtiene un producto por código.
+ * - POST    /insertarProducto       : Inserta un nuevo producto.
+ * - POST    /modificarProducto      : Modifica un producto existente.
+ * - DELETE  /deleteProducto/:codigo : Elimina un producto por código.
+ * - DELETE  /deleteUsuario/:usuario : Elimina un usuario por nombre de usuario.
+ * - GET     /GetUser                : Obtiene datos del usuario autenticado.
+ * - GET     /GetUserData/:user      : Obtiene datos completos de un usuario.
+ * - POST    /realizarCobro          : Registra una venta y actualiza inventario.
+ * - GET     /generar-pdf            : Genera PDF de productos faltantes.
+ * - POST    /imprimir-ticket        : Genera PDF de ticket de venta.
  *
  * Dependencias:
  * - express, mysql2, cors, jsonwebtoken, bcrypt, cookie-parser, pdfkit, pdfmake, fs, path
@@ -70,20 +70,29 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-const db = mysql2.createConnection({
-    host:"localhost",
-    user:"root",
-    //password:"superAbarrotes",
-    database:"superabarrotes"
-})
+// 🛠️ CONFIGURACIÓN DEL POOL DE CONEXIONES
+const db = mysql2.createPool({ 
+    host: "localhost",
+    user: "root",
+    //password: "superAbarrotes", // Descomenta si usas contraseña
+    database: "superabarrotes",
+    waitForConnections: true,
+    connectionLimit: 10,  // Número de conexiones concurrentes
+    queueLimit: 0
+});
+console.log('Pool de conexiones a la base de datos configurado.');
 
+// 🛠️ CORRECCIÓN: Se elimina db.connect() porque los Pools (createPool) 
+// no tienen ni necesitan este método. El Pool se inicializa automáticamente.
+/*
 db.connect((err) => {
     if (err) {
         console.error('Error connecting to the database: ' + err.stack);
         return;
-  }
+    }
     console.log('Connected to the database as ID ' + db.threadId);
 });
+*/
 
 app.post('/register_user', (req, res) => {
     const sql = "INSERT INTO trabajadores(`nombre`,`apellido_paterno`,`apellido_materno`,`usuario`,`contrasena`,`rol`) VALUES (?)";
@@ -120,7 +129,7 @@ app.post('/register_user', (req, res) => {
 
 app.post('/update_user', (req, res) => {
     const sql = "UPDATE trabajadores SET nombre=?, apellido_paterno=?, apellido_materno=?, contrasena=?, rol=? WHERE usuario=?";
-    const password_replace = "UPDATE  contrasena SET encriptada=?, texto_plano=? WHERE encriptada=(SELECT contrasena from trabajadores WHERE usuario=?)";
+    const password_replace = "UPDATE  contrasena SET encriptada=?, texto_plano=? WHERE encriptada=(SELECT contrasena from trabajadores WHERE usuario=?)";
     bcrypt.hash(req.body.contrasena, salt, (err, hash) => {
         if(err)return res.json({Error: "Error al encriptar la contraseña"});
         const values = [req.body.nombre.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase()), 
@@ -145,7 +154,7 @@ app.post('/update_user', (req, res) => {
             });
         });
         })
- });
+});
 
 app.post('/login', (req, res) => {
     const sql = "SELECT * FROM trabajadores WHERE usuario = ?";
@@ -427,7 +436,7 @@ app.get('/GetUserData/:user', (req, res) => {
 //Compras
 
 /* ========== GET proveedores ========== */
-router.get('/api/proveedores', (req, res) => {
+app.get('/api/proveedores', (req, res) => {
   const sql = 'SELECT codigo, nombre, telefono, correo FROM proveedores';
   db.query(sql, (err, results) => {
     if (err) {
@@ -439,7 +448,7 @@ router.get('/api/proveedores', (req, res) => {
 });
 
 /* ========== GET productos ========== */
-router.get('/api/productos', (req, res) => {
+app.get('/api/productos', (req, res) => {
   // Traemos codigo, nombre, precio y cantidad (existencias)
   const sql = 'SELECT codigo, nombre, precio, cantidad FROM productos';
   db.query(sql, (err, results) => {
@@ -451,7 +460,8 @@ router.get('/api/productos', (req, res) => {
   });
 });
 
-router.post('/api/compras', (req, res) => {
+// Ruta de compras que utiliza db.getConnection()
+app.post('/api/compras', (req, res) => {
   const { codigo_proveedor, total, detalles } = req.body;
   if (!codigo_proveedor || !Array.isArray(detalles) || detalles.length === 0) {
     return res.status(400).json({ error: 'Datos incompletos' });
@@ -485,7 +495,7 @@ router.post('/api/compras', (req, res) => {
         // Prepara valores para inserción en compras_detalle
         const valoresDetalle = detalles.map(d => [
           idCompra,
-          d.codigo,               // codigo del producto (productos.codigo)
+          d.codigo, 				// codigo del producto (productos.codigo)
           d.cantidad,
           d.precio_unitario,
           d.subtotal
@@ -543,11 +553,12 @@ router.post('/api/compras', (req, res) => {
 // CORTE DE CAJA con detalle de productos
 app.get('/corte-caja-dia', async (req, res) => {
   try {
+    // db.promise() funciona con el Pool
     const [ventas] = await db.promise().query(
       `SELECT v.num_venta, v.fecha, v.usuario, v.total, p.nombre, v.cantidad, v.total/v.cantidad AS precioUnitario
-       FROM ventas v
-       JOIN productos p ON v.producto = p.codigo
-       WHERE DATE(v.fecha) = CURDATE()`
+        FROM ventas v
+        JOIN productos p ON v.producto = p.codigo
+        WHERE DATE(v.fecha) = CURDATE()`
     );
 
     const ventasMap = {};
@@ -700,7 +711,9 @@ app.delete('/deleteProveedor/:codigo', (req, res) => {
 // ================== COMPRAS =====================
 // ================================================
 
+// Ruta de compra que utiliza db.promise() para Async/Await
 app.post('/realizarCompra', async (req, res) => {
+    // db.promise() obtiene un pool de promesas que gestiona las conexiones internamente
     const connection = db.promise();
 
     try {
@@ -823,6 +836,7 @@ app.get('/generar-pdf', (req, res) => {
             }
         };
         var printer = new PdfPrinter(fonts);
+        var pdfDoc = printer.createPdfKitDocument(dd);
         var pdfDoc = printer.createPdfKitDocument(dd);
         pdfDoc.pipe(fs.createWriteStream('lista_de_faltantes.pdf')).on('finish', () => {
             res.download('lista_de_faltantes.pdf', 'lista_de_faltantes.pdf', (err) => {

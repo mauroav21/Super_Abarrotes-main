@@ -1,60 +1,233 @@
-/* client/superabarrotes_cliente/src/Compras/Compras.css */
-.compras-container {
-  padding: 16px;
-  background: #fff;
-  border-radius: 8px;
+/* === ESTILO GLOBAL COMPATIBLE CON PUNTO DE VENTA === */
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+
+* {
+  font-family: "Josefin Sans", sans-serif;
 }
 
+/* === CONTENEDOR GENERAL === */
+.compras-container {
+  width: 90%;
+  margin-left: 6%;
+  margin-top: 2%;
+  padding: 2%;
+  background: #e9eef2;
+  border-radius: 12px;
+}
+
+.compras-container h2 {
+  color: #12274b;
+  font-size: 2rem;
+  margin-bottom: 25px;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* === CONTROLES SUPERIORES === */
 .compras-controls {
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
 }
+
 .field {
   display: flex;
   flex-direction: column;
-  min-width: 180px;
-}
-.field.small { min-width: 120px; }
-.field label { font-size: 0.9rem; margin-bottom: 6px; color: #333; }
-.field input, .field select {
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  min-width: 200px;
 }
 
-.table-wrapper { margin-top: 8px; overflow-x: auto; }
+.field.small {
+  min-width: 120px;
+}
 
-.data-table-compras {
-  width: 100%;
-  border-collapse: collapse;
-}
-.data-table-compras th, .data-table-compras td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #eee;
-  text-align: left;
-}
-.data-table-compras thead th {
-  background: #f7f7f7;
+.field label {
+  font-size: 14px;
+  margin-bottom: 5px;
   font-weight: 600;
+  color: #12274b;
 }
 
-.footer-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
+/* INPUTS Y SELECTS */
+.field select,
+.field input {
+  padding: 10px;
+  border: none;
+  background: #D4D4D4;
+  border-radius: 8px;
+  font-size: 15px;
+  width: 100%;
+  outline: none;
+  transition: 0.2s;
 }
-.total { font-size: 1.1rem; }
-.buttons { display: flex; gap: 8px; }
 
-.btn {
-  padding: 8px 12px;
+.field select:focus,
+.field input:focus {
+  background: #bfc5ca;
+}
+
+/* BOTÓN AGREGAR */
+.field.action button {
+  margin-top: auto;
+  background-color: #12274b;
+  color: white;
+  padding: 10px 18px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
+  transition: 0.3s ease;
 }
-.btn.buy { background: #1e90ff; color: #fff; }
-.btn.cancel { background: #f5f5f5; color: #333; border: 1px solid #ddd; }
-.btn-del { background: transparent; color: #c0392b; border: 1px solid #e6b7b7; padding: 6px 8px; border-radius: 6px; cursor: pointer;}
+
+.field.action button:hover {
+  background-color: #0e1e3a;
+}
+
+/* === TABLA === */
+.table-wrapper {
+  margin-top: 25px;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
+}
+
+/* DATATABLE */
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrapper th {
+  background-color: #12274b;
+  color: white;
+  padding: 12px;
+  font-size: 16px;
+}
+
+.table-wrapper td {
+  padding: 10px;
+  border-bottom: 1px solid #e3e3e3;
+  font-size: 15px;
+}
+
+.table-wrapper tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* BOTÓN ELIMINAR EN LA TABLA */
+.btn-delete {
+  background-color: #D9D9D9;
+  color: #CD1C18;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-delete:hover {
+  background-color: #CD1C18;
+  color: white;
+}
+
+/* === FOOTER (TOTAL, CANCELAR, COMPRAR) === */
+.footer-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
+}
+
+.total {
+  font-size: 1.4rem;
+  color: #12274b;
+  font-weight: 700;
+}
+
+.buttons {
+  display: flex;
+  gap: 15px;
+}
+
+/* BOTONES FINALES */
+.btn {
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s ease;
+}
+
+.btn.cancel {
+  background-color: #D9D9D9;
+  color: #CD1C18;
+}
+
+.btn.cancel:hover {
+  background-color: #CD1C18;
+  color: white;
+}
+
+.btn.buy {
+  background-color: #12274b;
+  color: white;
+}
+
+.btn.buy:hover {
+  background-color: #0d1e38;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .compras-controls {
+    flex-direction: column;
+  }
+  .footer-actions {
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+
+/* Texto negro en inputs y selects */
+.field select,
+.field input {
+  color: #000 !important; /* negro puro */
+  font-weight: 600;
+}
+
+.field select option {
+  color: #000;
+  font-weight: 600;
+}
+
+/* Texto de la tabla más oscuro */
+.table-wrapper td,
+.table-wrapper th {
+  color: #12274b; /* azul oscuro */
+  font-weight: 600;
+}
+
+.table-wrapper tr td {
+  color: #0e1e3a; /* aún más legible */
+}
+
+.table-wrapper th {
+  color: #fff !important;
+  font-weight: 700;
+}
+
+/* Alinear encabezado de tabla a la izquierda */
+.table-wrapper th {
+  text-align: left !important;
+  padding-left: 12px; 
+}
+
+
