@@ -5,6 +5,7 @@ import Inventario from './Inventario/Inventario.jsx';
 import Pventa from './Punto_de_venta/pventa.jsx';
 import Faltantes from './Inventario/Faltantes.jsx';
 import Usuarios from './Usuarios/admin_usuarios.jsx';
+import Compras from './Compras/Compras.jsx';
 
 function App() {
  return(
@@ -16,6 +17,7 @@ function App() {
        <Route path="/punto_de_venta" element={<Pventa />} />
        <Route path="/faltantes" element={<Faltantes />} />
        <Route path="/usuarios" element={<Usuarios />} />
+       <Route path="/compras" element={<Compras />} />
 
 
      </Routes>
