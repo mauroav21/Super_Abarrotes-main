@@ -419,7 +419,121 @@ app.get('/GetUserData/:user', (req, res) => {
 })
 
 
+//Compras <<<<-----
 
+/* ========== GET proveedores ========== */
+router.get('/api/proveedores', (req, res) => {
+  const sql = 'SELECT codigo, nombre, telefono, correo FROM proveedores';
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error al obtener proveedores' });
+    }
+    res.json(results);
+  });
+});
+
+/* ========== GET productos ========== */
+router.get('/api/productos', (req, res) => {
+  // Traemos codigo, nombre, precio y cantidad (existencias)
+  const sql = 'SELECT codigo, nombre, precio, cantidad FROM productos';
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error al obtener productos' });
+    }
+    res.json(results);
+  });
+});
+
+
+router.post('/api/compras', (req, res) => {
+  const { codigo_proveedor, total, detalles } = req.body;
+  if (!codigo_proveedor || !Array.isArray(detalles) || detalles.length === 0) {
+    return res.status(400).json({ error: 'Datos incompletos' });
+  }
+
+  db.getConnection((err, conn) => {
+    if (err) {
+      console.error('Error de conexión:', err);
+      return res.status(500).json({ error: 'Error de conexión' });
+    }
+
+    conn.beginTransaction(txErr => {
+      if (txErr) {
+        conn.release();
+        console.error(txErr);
+        return res.status(500).json({ error: 'Error al iniciar transacción' });
+      }
+
+      const insertCompraSql = 'INSERT INTO compras (codigo, total) VALUES (?, ?)';
+      conn.query(insertCompraSql, [codigo_proveedor, total], (err, result) => {
+        if (err) {
+          return conn.rollback(() => {
+            conn.release();
+            console.error(err);
+            res.status(500).json({ error: 'Error al insertar compra' });
+          });
+        }
+
+        const idCompra = result.insertId;
+
+        // Prepara valores para inserción en compras_detalle
+        const valoresDetalle = detalles.map(d => [
+          idCompra,
+          d.codigo,               // codigo del producto (productos.codigo)
+          d.cantidad,
+          d.precio_unitario,
+          d.subtotal
+        ]);
+
+        const insertDetalleSql = 'INSERT INTO compras_detalle (id_compra, codigo, cantidad, precio_unitario, subtotal) VALUES ?';
+        conn.query(insertDetalleSql, [valoresDetalle], (err) => {
+          if (err) {
+            return conn.rollback(() => {
+              conn.release();
+              console.error(err);
+              res.status(500).json({ error: 'Error al insertar detalles' });
+            });
+          }
+
+          // Actualizar existencia (productos.cantidad) uno por uno
+          const actualizarExistencia = (i) => {
+            if (i >= detalles.length) {
+              // commit
+              return conn.commit(commitErr => {
+                if (commitErr) {
+                  return conn.rollback(() => {
+                    conn.release();
+                    console.error(commitErr);
+                    res.status(500).json({ error: 'Error al confirmar transacción' });
+                  });
+                }
+                conn.release();
+                return res.json({ ok: true, id_compra: idCompra });
+              });
+            }
+
+            const d = detalles[i];
+            const sqlUpd = 'UPDATE productos SET cantidad = cantidad + ? WHERE codigo = ?';
+            conn.query(sqlUpd, [d.cantidad, d.codigo], (err) => {
+              if (err) {
+                return conn.rollback(() => {
+                  conn.release();
+                  console.error(err);
+                  res.status(500).json({ error: 'Error al actualizar existencia' });
+                });
+              }
+              actualizarExistencia(i + 1);
+            });
+          };
+
+          actualizarExistencia(0);
+        });
+      });
+    });
+  });
+});
 
 
 
