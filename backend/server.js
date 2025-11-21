@@ -62,6 +62,10 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+//-----Rutas de Compras -----
+app.use(express.json());
+app.use(comprasRouter);
+
 app.use(express.json());
 app.use(cors({
     origin: ["http://localhost:5173"],
