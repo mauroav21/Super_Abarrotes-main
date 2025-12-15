@@ -1,4 +1,4 @@
-import './Modal.css'
+//import './Modal.css'
 import PropTypes from 'prop-types';
 import axios from 'axios'
 import { useEffect, useState } from 'react'
