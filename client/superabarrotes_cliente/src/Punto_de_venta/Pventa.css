@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+
+* {
+  font-family: "Josefin Sans", sans-serif;
+}
+
+/* === CONTENEDOR PRINCIPAL === */
+.pventa-container {
+  width: 90%;
+  margin-left: 6%;
+  margin-top: 2%;
+  padding: 2%;
+  background: #e9eef2;
+  border-radius: 12px;
+}
+
+/* === CONTROLES SUPERIORES === */
+.table-wrapper {
+  margin-top: 25px;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
+}
+
+/* INPUTS Y SELECTS */
+.pventa-container input,
+.pventa-container select {
+  padding: 10px;
+  border: none;
+  background: #D4D4D4;
+  border-radius: 8px;
+  font-size: 15px;
+  width: 100%;
+  outline: none;
+  color: #000; /* texto negro */
+  font-weight: 600;
+}
+
+.pventa-container input:focus,
+.pventa-container select:focus {
+  background: #bfc5ca;
+}
+
+/* TABLA */
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrapper th {
+  background-color: #12274b;
+  color: white;
+  padding: 12px;
+  font-size: 16px;
+  text-align: left;
+}
+
+.table-wrapper td {
+  padding: 10px;
+  border-bottom: 1px solid #e3e3e3;
+  font-size: 15px;
+  color: #0e1e3a;
+}
+
+.table-wrapper tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* BOTÓN ELIMINAR EN LA TABLA */
+.btn-del {
+  background-color: #D9D9D9;
+  color: #CD1C18;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-del:hover {
+  background-color: #CD1C18;
+  color: white;
+}
+
+/* FOOTER (TOTAL, CANCELAR, COBRAR) */
+.footer-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
+}
+
+.total {
+  font-size: 1.4rem;
+  color: #12274b;
+  font-weight: 700;
+}
+
+.buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.btn {
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s ease;
+}
+
+.btn.cancel {
+  background-color: #D9D9D9;
+  color: #CD1C18;
+}
+
+.btn.cancel:hover {
+  background-color: #CD1C18;
+  color: white;
+}
+
+.btn.buy {
+  background-color: #12274b;
+  color: white;
+}
+
+.btn.buy:hover {
+  background-color: #0d1e38;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .pventa-container {
+    width: 95%;
+    margin-left: 2%;
+  }
+}

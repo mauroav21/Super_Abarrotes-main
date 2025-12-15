@@ -1,59 +1,14 @@
 /**
  * ModificacionUsuariosModal.jsx
  *
- * Componente React que muestra un modal para modificar los datos de un usuario (trabajador).
+ * Componente React refactorizado para modificar los datos de un usuario.
  *
- * Props:
- *  - closeModal (func): función para cerrar el modal. Se llama como closeModal(false) desde el botón Cancelar.
- *  - usuario (string): identificador del usuario cuyos datos se deben cargar y modificar.
- *
- * Estado local (values):
- *  - usuario: string (campo deshabilitado en el formulario)
- *  - nombre: string
- *  - apellido_materno: string
- *  - apellido_paterno: string
- *  - contrasena: string (se carga desde res.data.texto_plano actualmente)
- *  - confirmar_contrasena: string (para validar coincidencia)
- *  - rol: string ('Operario' o 'Administrador')
- *
- * Comportamiento principal:
- *  - useEffect: si existe prop `usuario`, realiza GET a /GetUserData/:usuario y setea `values` con la respuesta.
- *  - handleChange: limita longitud de campos (nombre, apellidos, contraseñas) y actualiza estado.
- *  - handleKeyDown: evita caracteres especiales en campos de nombre/apellidos y controla longitudes.
- *  - handleSubmit:
- *      - previene comportamiento por defecto del form.
- *      - valida que contrasena === confirmar_contrasena; si no coinciden, muestra error en el elemento con id "passerror".
- *      - si coinciden, envía POST a /update_user con `values`.
- *      - si respuesta 200: guarda mensaje en localStorage y recarga la página (window.location.reload()).
- *      - si error relacionado con usuario: muestra mensaje en el elemento con id "usererror".
- *
- * Validaciones / UX:
- *  - Todos los inputs tienen required y maxLength.
- *  - Los campos de usuario están deshabilitados (no editables) y ocultos visualmente.
- *  - Los mensajes de error se muestran usando elementos <error id="usererror"> y <error id="passerror"> manipulados vía DOM.
- *
- * Llamadas HTTP:
- *  - GET  http://localhost:8081/GetUserData/:usuario
- *  - POST http://localhost:8081/update_user
- *
- * Riesgos y recomendaciones:
- *  - Seguridad: el backend devuelve `texto_plano` para rellenar la contraseña. Esto es inseguro en producción.
- *    Recomendación: no rellenar la contraseña en el formulario; dejarla vacía y sólo enviar una nueva contraseña si el usuario la proporciona.
- *  - Evitar manipulación directa del DOM (document.getElementById, toggleAttribute). Mejor usar estado React (useState / useRef).
- *  - Evitar recargar la página tras una actualización; en lugar de window.location.reload(), actualizar el estado/props o usar un callback.
- *  - Reemplazar el elemento <error> personalizado por un componente de error controlado por estado para accesibilidad.
- *  - Considerar normalizar y sanitizar entradas antes de enviarlas al backend.
- *
- * Puntos de mejora práctico:
- *  - Extraer validaciones en funciones reutilizables.
- *  - Limitar maxLength de inputs y keyDown de forma coherente (los atributos maxLength en JSX ya evitan exceso de caracteres).
- *  - Usar axios interceptors para manejo centralizado de errores y mostrar toasts informativos.
- *
- * Rutas/archivos relacionados:
- *  - Backend endpoints: server.js (GetUserData, update_user)
- *  - Estilos: Modal.css
- *
- * >>>JULIA POR FAVOR REVISA LOS COMENTARIOS<<<
+ * Correcciones:
+ * - Se reemplazó la etiqueta <error> por <span>.
+ * - Se eliminó la manipulación directa del DOM (document.getElementById) para errores.
+ * - Los errores y mensajes se manejan con estado de React (useState).
+ * - Seguridad: Los campos de contraseña se inicializan vacíos (no se carga la contraseña en texto plano).
+ * - Manejo de errores de red (500) usando toast.
  */
 
 import './Modal.css'
@@ -63,6 +18,10 @@ import { useState, useEffect } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
 
 function ModificacionUsuariosModal({ closeModal, usuario }) {
+    
+    // ----------------------------------------------------
+    // 1. ESTADO DEL FORMULARIO
+    // ----------------------------------------------------
     const [values, setValues] = useState({
         usuario: '',
         nombre: '',
@@ -73,140 +32,180 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
         confirmar_contrasena: '',
     });
 
+    // ----------------------------------------------------
+    // 2. ESTADO DE ERRORES Y CARGA
+    // ----------------------------------------------------
+    const [passwordError, setPasswordError] = useState('');
+    const [userError, setUserError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    // ----------------------------------------------------
+    // 3. CARGA DE DATOS INICIALES (useEffect)
+    // ----------------------------------------------------
     useEffect(() => {
         if (usuario) {
+            setLoading(true);
             axios.get(`http://localhost:8081/GetUserData/${usuario}`)
-                .then(res => {  
+                .then(res => { 
+                    // Si el servidor responde correctamente, inicializamos los campos.
+                    // IMPORTANTÍSIMO: NO se carga la contraseña.
                     setValues({
                         usuario: res.data.usuario,
                         nombre: res.data.Nombre,
                         apellido_materno: res.data.apellido_materno,
                         apellido_paterno: res.data.apellido_paterno,
-                        contrasena: res.data.texto_plano,           
-                        confirmar_contrasena: res.data.texto_plano,   
+                        contrasena: '', 
+                        confirmar_contrasena: '',
                         rol: res.data.rol
                     });
                 })
-
                 .catch((error) => {
-                    toast.error('Error obteniendo los datos del producto, recargue la página');
-                    console.error(error);
+                    // Manejo del ERROR 500 del servidor
+                    console.error("Error al cargar datos del usuario (500):", error);
+                    toast.error('Error cargando los datos del usuario. Por favor, revise la consola del servidor (Backend).');
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         }
-    }, [usuario]);
+    }, [usuario, closeModal]);
 
 
-    
-
+    // ----------------------------------------------------
+    // 4. MANEJO DE ENVÍO DE FORMULARIO (handleSubmit)
+    // ----------------------------------------------------
     const handleSubmit = (event) => {
         event.preventDefault();
-        const passError = document.getElementById("passerror")
-        const usererror = document.getElementById("usererror")
+        
+        // Limpiar errores previos
+        setPasswordError('');
+        setUserError('');
+        
+        const { contrasena, confirmar_contrasena } = values;
 
-        if(values.contrasena !== values.confirmar_contrasena){
-            document.getElementById("passerror").innerHTML="Las contraseñas NO coinciden";
-            usererror.removeAttribute("open");
-            if (!passError.hasAttribute("open")) {
-              passError.toggleAttribute("open");
+        // Validación de Contraseñas (solo si se está intentando cambiar)
+        if (contrasena || confirmar_contrasena) {
+            if (contrasena !== confirmar_contrasena) {
+                setPasswordError("Las contraseñas NO coinciden.");
+                return;
             }
-            return;
-        }else{
-            if (passError.hasAttribute("open")) {
-                passError.toggleAttribute("open");
-                document.getElementById("passerror").removeAttribute("open");
-              }
-            console.log(values);
-            axios.post('http://localhost:8081/update_user', values)
-                .then(res => {
-                    if (res.status === 200) {
-                        localStorage.setItem('showToast', 'Usuario modificado con éxito');
-                        window.location.reload();
-                    } else {
-                        if(res.data.Error.toLowerCase().includes("usuario")){
-                            document.getElementById("usererror").innerHTML=res.data.Error;
-                            if (!usererror.hasAttribute("open")) {
-                                usererror.toggleAttribute("open");
-                              }
-                            }
-                    }
-                })
-                .catch(err => console.log(err));
+            if (contrasena.length < 6) { 
+                setPasswordError("La nueva contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
         }
+        
+        // Objeto de datos a enviar
+        const dataToSend = {
+            usuario: values.usuario,
+            nombre: values.nombre,
+            apellido_materno: values.apellido_materno,
+            apellido_paterno: values.apellido_paterno,
+            rol: values.rol,
+        };
+
+        // Solo incluir la contraseña si se proporcionó una nueva
+        if (contrasena) {
+            dataToSend.contrasena = contrasena;
+        }
+
+        axios.post('http://localhost:8081/update_user', dataToSend)
+            .then(res => {
+                if (res.status === 200) {
+                    toast.success('Usuario modificado con éxito.');
+                    // Usamos setTimeout para dar tiempo a ver el toast antes de cerrar el modal
+                    setTimeout(() => closeModal(true), 1500); 
+                } else {
+                    const errorMsg = res.data?.Error || "Error desconocido al actualizar.";
+                    if(errorMsg.toLowerCase().includes("usuario")){
+                        setUserError(errorMsg);
+                    } else {
+                        toast.error(errorMsg);
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Error al actualizar usuario:", err);
+                toast.error("Error al conectar con el servidor o error desconocido.");
+            });
     };
 
+    // ----------------------------------------------------
+    // 5. MANEJO DE CAMBIOS (handleChange)
+    // ----------------------------------------------------
     const handleChange = (e) => {
         const { name, value } = e.target;
         let newValue = value;
 
-        switch (name) {
-            case 'nombre':
-                newValue = value.slice(0, 30);
-                break;
-            case 'apellido_paterno':
-                newValue = value.slice(0, 20); 
-                break;
-            case 'apellido_materno':
-                newValue = value.slice(0, 20); 
-                break;
-            case 'contrasena':
-                newValue = value.slice(0, 20); 
-                break;
-            case 'confirmar_contrasena':
-                newValue = value.slice(0, 20);
-                break;
-            default:
-                break;
+        // Truncamiento de valores para que coincida con el maxLength de 35
+        const maxLengths = {
+            nombre: 35,
+            apellido_paterno: 35,
+            apellido_materno: 35,
+            contrasena: 35,
+            confirmar_contrasena: 35,
+        };
+        
+        if (maxLengths[name] !== undefined) {
+             newValue = value.slice(0, maxLengths[name]);
+        }
+        
+        // Limpiar mensajes de error relacionados al escribir
+        if (name === 'contrasena' || name === 'confirmar_contrasena') {
+            setPasswordError('');
+        }
+        if (name === 'usuario') {
+            setUserError('');
         }
 
         setValues({ ...values, [name]: newValue });
     };
 
+    // ----------------------------------------------------
+    // 6. MANEJO DE TECLAS (handleKeyDown)
+    // ----------------------------------------------------
     const handleKeyDown = (e) => {
         const { name } = e.target;
-        const maxLength = {
-            codigo: 13,
-            cantidad_minima: 5,
-            cantidad: 5,
-            precio: 10,
-        };
-        const actualLength = values[name].replace(/\./g, '').length;
-
+        
+        // Evitar caracteres especiales en campos de nombre y apellidos
         if (['nombre', 'apellido_paterno', 'apellido_materno'].includes(name)) {
-            if( e.key === '-' || e.key === '?' || e.key === '!' || e.key === '@' || e.key === '#' || e.key === '$' 
-                || e.key === '%' || e.key === '^' || e.key === '&' || e.key === '*' || e.key === '(' || e.key === ')' 
-                || e.key === '+' || e.key === '=' || e.key === '{' || e.key === '}' || e.key === '[' || e.key === ']' 
-                || e.key === ':' || e.key === ';' || e.key === '"' || e.key === "'" || e.key === '<' || e.key === '>'
-                 || e.key === ',' || e.key === '.' || e.key === '/' || e.key === '\\'){
+            const forbiddenKeys = /[-?!@#$%^&*()+={\[}\]:;"'<>,./\\]/;
+            
+            if (forbiddenKeys.test(e.key) && e.key.length === 1) { 
                 e.preventDefault();
             }
-            const inputElement = document.getElementById(name); 
-            if(!isTextSelected(document.getElementById(inputElement))){
-                if (e.key in ['Backspace', 'Delete', 'Tab'] && actualLength >= maxLength[name]) {
-                    e.preventDefault();
-                }
-            }
         }
+        // Se recomienda confiar en el atributo maxLength de JSX para limitar la longitud
     };
-
-    function isTextSelected(input) {
-        if (typeof input.selectionStart == "number") {
-            return input.selectionStart == 0 && input.selectionEnd == input.value.length;
-        } else if (typeof document.selection != "undefined") {
-            input.focus();
-            return document.selection.createRange().text == input.value;
-        }
+    
+    // ----------------------------------------------------
+    // 7. RENDERIZADO
+    // ----------------------------------------------------
+    if (loading) {
+        return (
+            <div className="modalBackground_user" style={{ zIndex: 9999 }}>
+                <div className="modalContainer_user">
+                    <p>Cargando datos del usuario...</p>
+                    <button id='cancelButton_user' onClick={() => closeModal(false)}>Cerrar</button>
+                </div>
+            </div>
+        );
     }
-
+    
     return (
         <>
             <div><Toaster /></div>
-            <div className="modalBackground_user">
+            <div className="modalBackground_user" style={{ zIndex: 9999 }}>
                 <div className="modalContainer_user">
                     <div className="header">
                         Modificación de Usuarios
                     </div>
                     <div className="forms_user">
                         <form onSubmit={handleSubmit} className='formModal_user'>
+                            
+                            {/* USUARIO (Valor del ID) */}
+                            <input type="hidden" name='usuario' value={values.usuario} readOnly />
+
                             <div className='rowInput'>
                                 <div className='inputLabel_user'>
                                     <label className="labelModal_user" htmlFor='nombre'>Nombre</label>
@@ -219,6 +218,7 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
                                         maxLength='35'
                                         value={values.nombre}
                                         onChange={handleChange}
+                                        onKeyDown={handleKeyDown}
                                     />
                                 </div>
                                 <div className='inputLabel_user'>
@@ -250,29 +250,33 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
                                         onKeyDown={handleKeyDown}
                                     />
                                 </div>
+                                {/* Mostrar el usuario a modificar como texto, no como input editable */}
                                 <div className='inputLabel_user'>
-                                    <label className="labelModal_user" htmlFor='usuario' style={{display: 'none'}}>Usuario</label>
-                                    <input className="inputAlta_user" 
-                                        style={{display: 'none'}}
-                                        required
-                                        id="usuario"
-                                        name='usuario'
-                                        size='30'
-                                        type='text'
-                                        maxLength='35'
-                                        value={values.usuario}
-                                        onChange={handleChange}
-                                        onKeyDown={handleKeyDown}
-                                        disabled
-                                    />
+                                    <label className="labelModal_user">Usuario a Modificar</label>
+                                    <p className="inputAlta_user" style={{
+                                        fontWeight: 'bold', 
+                                        backgroundColor: '#eee', 
+                                        padding: '6px', 
+                                        borderRadius: '4px',
+                                        fontSize: '1em',
+                                        border: '1px solid #ccc'
+                                    }}>
+                                        {values.usuario || 'Cargando...'}
+                                    </p>
                                 </div>
                             </div>
-                            <error id="usererror" style={{color: "red", marginLeft: "20%", fontSize: "140%", marginTop: "0%", marginBottom: '0%'}}>Hola soy un texto</error>
+                            
+                            {/* MOSTRAR ERROR DE USUARIO (REEMPLAZO DE <error id="usererror">) */}
+                            {userError && (
+                                <span style={{color: "red", marginLeft: "20%", fontSize: "140%", marginTop: "0%", marginBottom: '0%'}}>
+                                    {userError}
+                                </span>
+                            )}
+
                             <div className='rowInput'>
                                 <div className='inputLabel_user' style={{marginTop:'7%'}}>
-                                    <label className="labelModal_user" htmlFor='contrasena'>Contraseña</label>
+                                    <label className="labelModal_user" htmlFor='contrasena'>Contraseña (Dejar vacío para no cambiar)</label>
                                     <input className="inputAlta_user"
-                                        required
                                         id="contrasena"
                                         name='contrasena'
                                         size='30'
@@ -280,13 +284,11 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
                                         maxLength='35'
                                         value={values.contrasena}
                                         onChange={handleChange}
-                                        onKeyDown={handleKeyDown}
-                                        />
+                                    />
                                 </div>
                                 <div className='inputLabel_user'>
                                     <label className="labelModal_user" htmlFor='confirmar_contrasena'> Confirmar contraseña</label>
                                     <input className="inputAlta_user"
-                                        required
                                         id="confirmar_contrasena"
                                         name='confirmar_contrasena'
                                         size='30'
@@ -294,11 +296,16 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
                                         maxLength='35'
                                         value={values.confirmar_contrasena}
                                         onChange={handleChange}
-                                        onKeyDown={handleKeyDown}
-                                        />
+                                    />
                                 </div>
                             </div>
-                            <error id="passerror" style={{color: "red", marginLeft: "20%", fontSize: "140%"}}>Hola soy un texto</error>
+                            
+                            {/* MOSTRAR ERROR DE CONTRASEÑA (REEMPLAZO DE <error id="passerror">) */}
+                            {passwordError && (
+                                <span style={{color: "red", marginLeft: "20%", fontSize: "140%"}}>
+                                    {passwordError}
+                                </span>
+                            )}
 
                             <div style={{display:'flex', flexDirection:'column', marginTop:'4%', color:'black'}}>
                                     <label className="labelModal_user" htmlFor='rol'> Rol</label>
@@ -311,7 +318,7 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
                                         value="Operario"
                                         onChange={(e) => setValues({...values, rol: e.target.value})} 
                                         checked={values.rol === "Operario"}/>
-                                    <label htmlFor="rol" style={{marginRight: '5%'}}> Operario</label>
+                                    <label htmlFor="rol_operario" style={{marginRight: '5%'}}> Operario</label>
                                     <input className="inputAlta_user"
                                         required
                                         id="rol_admin"
@@ -321,12 +328,12 @@ function ModificacionUsuariosModal({ closeModal, usuario }) {
                                         onChange={(e) => setValues({...values, rol: e.target.value})}
                                         checked={values.rol === "Administrador"}
                                         />
-                                    <label htmlFor="rol"> Administrador</label>
+                                    <label htmlFor="rol_admin"> Administrador</label>
                                     </div>
-                             </div>
+                            </div>
                             <div id='buttons' style={{marginTop:'3%'}}>
                                 <button id='acceptButton_user' type='submit'>Aceptar</button>
-                                <button id='cancelButton_user' onClick={() => closeModal(false)}>Cancelar</button>
+                                <button id='cancelButton_user' type='button' onClick={() => closeModal(false)}>Cancelar</button>
                             </div>
                         </form>
                     </div>
