@@ -20,7 +20,7 @@ const AlertTriangle = (props) => (
     </svg>
 );
 
-// NOTA: closeModal ahora acepta un booleano (true para recargar la tabla)
+
 function EliminarProveedorModal({ closeModal, codigo }) {
     const [values, setValues] = useState({
         codigo: '',
@@ -31,7 +31,7 @@ function EliminarProveedorModal({ closeModal, codigo }) {
     });
     const [loading, setLoading] = useState(false);
 
-    // 1. Bloqueo de scroll
+    // 1. Bloqueo de scroll y corrección de sintaxis
     useEffect(() => {
         const body = document.body;
         const originalOverflow = body.style.overflow;
@@ -39,28 +39,30 @@ function EliminarProveedorModal({ closeModal, codigo }) {
 
         body.style.overflow = 'hidden';
         if (scrollBarWidth > 0) {
-            body.style.paddingRight = `${scrollBarWidth}px`;
+            // CORRECCIÓN: Usar scrollBarWidth, no scrollBarBarWidth
+            body.style.paddingRight = `${scrollBarWidth}px`; 
         }
 
         return () => {
             body.style.overflow = originalOverflow;
-            body.style.paddingRight = ''; // Restaura el padding
+            body.style.paddingRight = '';
         };
     }, []);
 
-    // 2. Obtener los datos del proveedor al abrir el modal
+    // 2. Obtener los datos del proveedor
     useEffect(() => {
         if (!codigo) return;
 
         const fetchProveedorData = async () => {
             try {
-                // Asume la misma estructura de URL: GetProveedorData
+                // Usar la ruta /GetProveedor/:codigo
                 const res = await axios.get(`http://localhost:8081/GetProveedor/${codigo}`);
                 
-                if (res.status === 200 && res.data) {
-                    const prov = res.data;
+                // Acceder a la propiedad 'Proveedor' y verificar Status
+                if (res.status === 200 && res.data.Status === 'Exito' && res.data.Proveedor) { 
+                    const prov = res.data.Proveedor; 
+                    
                     setValues({
-                        // Usamos || '' para evitar warnings y asegurar que el estado se inicialice
                         codigo: prov.codigo || '',
                         nombre: prov.nombre || '',
                         contacto: prov.contacto || '',
@@ -69,37 +71,47 @@ function EliminarProveedorModal({ closeModal, codigo }) {
                     });
                 } else {
                     toast.error(res.data?.Error || 'Error al obtener los datos del proveedor.');
-                    closeModal(false); // Cierra si falla la carga
+                    closeModal(false);
                 }
             } catch (error) {
                 toast.error('Error de conexión al obtener los datos.');
                 console.error(error);
-                closeModal(false); // Cierra si falla la conexión
+                closeModal(false);
             }
         };
 
         fetchProveedorData();
     }, [codigo, closeModal]);
 
-    // 3. Eliminar proveedor y notificar recarga
+    // 3. Eliminar proveedor y notificar recarga (Estructura Try/Catch Corregida)
     const handleDelete = async () => {
         setLoading(true);
         try {
             const res = await axios.delete(`http://localhost:8081/deleteProveedor/${values.codigo}`);
             
-            if (res.status === 200) {
+            if (res.status === 200 && res.data.Status === "Exito") {
                 toast.success('Proveedor eliminado correctamente.');
-                // ⭐️ CAMBIO CLAVE: Llama a closeModal(true) para recargar la tabla padre
+                // Recarga la tabla padre
                 closeModal(true); 
             } else {
+                // Manejo de respuesta 200 con Status no exitoso
                 toast.error(res.data?.Error || 'Error al eliminar el proveedor.');
-                closeModal(false); // Cierra sin recargar si hay error
+                closeModal(false); 
             }
         } catch (error) {
-            toast.error('No se pudo eliminar el proveedor. Error de conexión.');
+            // Manejo de errores de red o errores 4xx/5xx del servidor
+            if (error.response) {
+                // Error 409 (Conflicto de Clave Foránea) o 404/500
+                const errorMessage = error.response.data?.Error || error.response.data?.message || 'Error desconocido del servidor.';
+                toast.error(errorMessage);
+            } else {
+                // Error de conexión (servidor caído)
+                toast.error('No se pudo establecer conexión con el servidor.');
+            }
             console.error(error);
-            closeModal(false); // Cierra sin recargar si hay error
+            closeModal(false); 
         } finally {
+            // El finally siempre se ejecuta al final de try o catch
             setLoading(false);
         }
     };
@@ -107,7 +119,7 @@ function EliminarProveedorModal({ closeModal, codigo }) {
     // Maneja el click fuera del modal
     const handleBackgroundClick = (e) => {
         if (e.target === e.currentTarget) {
-            closeModal(false); // Cierra sin recargar
+            closeModal(false);
         }
     };
 
@@ -116,7 +128,6 @@ function EliminarProveedorModal({ closeModal, codigo }) {
         <>
             <Toaster position="top-center" />
             
-            {/* Fondo Oscuro y Posicionamiento Fijo (Simula modalBackground) */}
             <div
                 onClick={handleBackgroundClick}
                 style={{
@@ -132,13 +143,12 @@ function EliminarProveedorModal({ closeModal, codigo }) {
                     backgroundColor: 'rgba(17, 24, 39, 0.75)'
                 }}
             >
-                {/* Contenedor del Modal (Simula modalContainer con estilo moderno) */}
                 <div
                     className="bg-white rounded-xl shadow-2xl overflow-hidden transition-all duration-300 transform scale-100"
                     style={{ width: '500px', maxWidth: '90vw' }}
                     onClick={(e) => e.stopPropagation()} 
                 >
-                    {/* Header - Usamos el color de alerta (rojo) para la eliminación */}
+                    {/* Header */}
                     <div className="bg-red-600 text-white p-5 flex justify-between items-center">
                         <h3 className="text-xl font-bold flex items-center">
                             <AlertTriangle className="w-6 h-6 mr-2" />
@@ -154,20 +164,17 @@ function EliminarProveedorModal({ closeModal, codigo }) {
                         </button>
                     </div>
 
-                    {/* Cuerpo del Modal (Simula forms) */}
+                    {/* Cuerpo del Modal */}
                     <div className="p-6 space-y-6 flex flex-col items-center text-center">
                         <p className='text-gray-700 text-lg font-semibold'>
                             ¿Estás seguro de que deseas eliminar permanentemente este proveedor?
                         </p>
 
-                        {/* Detalle del proveedor a eliminar */}
                         <div className='bg-red-50 border border-red-200 p-4 rounded-lg w-full'>
                             <ul className='text-sm text-gray-800 space-y-1 text-left'>
                                 <li><strong>Código:</strong> {values.codigo}</li>
                                 <li><strong>Nombre:</strong> {values.nombre}</li>
-                                {/* Asumo que los campos Contacto y Teléfono son relevantes para la confirmación */}
-                                <li><strong>Contacto:</strong> {values.contacto}</li>
-                                <li><strong>Teléfono:</strong> {values.telefono}</li>
+                                <li><strong>Teléfono:</strong> {values.telefono}</li> 
                             </ul>
                         </div>
 
@@ -179,7 +186,7 @@ function EliminarProveedorModal({ closeModal, codigo }) {
                         <div className='pt-4 border-t border-gray-100 flex justify-center space-x-6 w-full'>
                             <button 
                                 type='button' 
-                                onClick={() => closeModal(false)} // Cierra sin recargar
+                                onClick={() => closeModal(false)}
                                 disabled={loading}
                                 className="px-5 py-2 text-base font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition duration-150 disabled:opacity-50"
                             >
@@ -210,7 +217,7 @@ function EliminarProveedorModal({ closeModal, codigo }) {
 
 EliminarProveedorModal.propTypes = {
     closeModal: PropTypes.func.isRequired,
-    codigo: PropTypes.string, // puede ser null al inicio
+    codigo: PropTypes.string,
 };
 
 export default EliminarProveedorModal;
