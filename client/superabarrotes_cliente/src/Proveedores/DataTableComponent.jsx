@@ -1,35 +1,11 @@
-/**
- * DataTableProveedores.jsx
- *
- * Propósito:
- *  - Mostrar la lista de proveedores en una tabla (react-data-table-component).
- *  - Permitir abrir los modales de modificación y eliminación.
- *
- * Estado:
- *  - data: lista de proveedores obtenida del backend.
- *  - loading / error: controlan el estado de carga y errores.
- *  - openModal / openModalDelete: muestran los modales de edición o eliminación.
- *  - selectedCodigo: código del proveedor seleccionado.
- *
- * Llamadas al backend:
- *  - GET http://localhost:8081/data_proveedores
- *
- * Columnas:
- *  - Código, Nombre, Teléfono, Correo
- *
- * Archivos relacionados:
- *  - ModificacionProveedoresModal.jsx
- *  - EliminarProveedorModal.jsx
- */
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DataTable from 'react-data-table-component';
 import axios from 'axios';
 import delIcon from '../assets/inventario/-.svg';
 import modIcon from '../assets/inventario/modIcon.svg';
 import ModificacionProveedoresModal from './ModificacionProveedoresModal';
 import EliminarProveedorModal from "./EliminarModal";
-
+import toast from 'react-hot-toast';
 
 function DataTableProveedores() {
   const [data, setData] = useState([]);
@@ -38,6 +14,8 @@ function DataTableProveedores() {
   const [openModal, setOpenModal] = useState(false);
   const [openModalDelete, setOpenModalDelete] = useState(false);
   const [selectedCodigo, setSelectedCodigo] = useState(null);
+  // Nuevo estado para forzar la recarga de datos
+  const [refreshToggle, setRefreshToggle] = useState(0); 
 
   const customStyles = {
     headRow: {
@@ -49,20 +27,37 @@ function DataTableProveedores() {
     },
   };
 
-  // Cargar datos de proveedores
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await axios.get('http://localhost:8081/data_proveedores');
-        setData(response.data);
-      } catch (err) {
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
+  // Función de carga de datos encapsulada
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('http://localhost:8081/data_proveedores');
+      setData(response.data);
+      setError(null);
+    } catch (err) {
+      setError(err);
+      toast.error("Error al cargar la lista de proveedores.");
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, []);
+
+  // Cargar datos de proveedores (se ejecuta en montaje y al cambiar refreshToggle)
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, refreshToggle]); // Dependencia 'refreshToggle' dispara la recarga
+
+  // Manejador de cierre de modales que verifica si debe recargar
+  const handleCloseModal = (shouldRefresh = false) => {
+    setOpenModal(false); 
+    setOpenModalDelete(false); 
+    setSelectedCodigo(null);
+
+    if (shouldRefresh) {
+      // Incrementa el toggle para disparar el useEffect y recargar
+      setRefreshToggle(prev => prev + 1); 
+    }
+  };
 
   const handleDelete = (codigo) => {
     setSelectedCodigo(codigo);
@@ -111,25 +106,22 @@ function DataTableProveedores() {
         data={data}
         noDataComponent="No hay proveedores registrados"
         defaultSortFieldId={1}
-        //pagination
         responsive
-        //paginationPerPage={5}
         fixedHeader
         fixedHeaderScrollHeight="50%"
         customStyles={customStyles}
-        //paginationRowsPerPageOptions={[5, 10, 15, 20, 25, 30]}
       />
 
       {openModal && (
         <ModificacionProveedoresModal
-          closeModal={() => setOpenModal(false)}
+          closeModal={handleCloseModal} // Pasa la nueva función de manejo
           codigo={selectedCodigo}
         />
       )}
 
       {openModalDelete && (
         <EliminarProveedorModal
-          closeModal={() => setOpenModalDelete(false)}
+          closeModal={handleCloseModal} // Pasa la nueva función de manejo
           codigo={selectedCodigo}
         />
       )}
