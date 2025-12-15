@@ -1,25 +1,18 @@
 import { Component, createRef } from 'react';
-// Se añade la importación de Tailwind CSS para el nuevo diseño.
 import 'tailwindcss/tailwind.css'; 
-
-// Importaciones de assets originales
-// NOTA: Se mantienen las rutas de assets, pero los iconos en el menú se reemplazan 
-// por componentes SVG para consistencia con el diseño de CorteCaja.
 import {Link} from "react-router-dom";
-// Componentes y utilidades de lógica original
 import DataTableComponent from './DataTableComponent';
 import GetUser from '../GetUser';
 import axios from 'axios';
 import Logout from '../Logout'
-import AltaUsuarios from './AltaUsuarios';
+import AltaUsuariosModal from './AltaUsuariosModal'; // 💡 Importación renombrada para mayor claridad
 import PropTypes from 'prop-types';
 import toast, { Toaster } from 'react-hot-toast';
 
 
 // ----------------------------------------------------------------------
-// Iconos SVG Recreados para Consistencia de Estilo (Tomados del archivo CorteCaja)
+// Iconos SVG (Mantienen la consistencia de estilo)
 // ----------------------------------------------------------------------
-
 const baseIconProps = {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
@@ -116,17 +109,21 @@ class Admin_usuarios extends Component {
     constructor(props) {
         super(props);
         this.sidenav = createRef();
-        this.storeButton = createRef(); // Mantener para compatibilidad de lógica
+        this.storeButton = createRef();
         this.ui = createRef();
-        this.sidenavmenu = createRef(); // Mantener para compatibilidad de lógica
+        this.sidenavmenu = createRef();
         this.state = {
             isAuthenticated: false,
             rol: null,
             user: null,
-            isNavOpen: false, // Nuevo estado para controlar el sidenav con Tailwind
+            isNavOpen: false, 
+            isAltaModalOpen: false,      // 🛑 NUEVO ESTADO PARA EL MODAL
+            shouldReloadTable: false,    // 🛑 NUEVO ESTADO PARA RECARGAR LA TABLA
         };
         this.openNavbar = this.openNavbar.bind(this);
         this.closeNavbar = this.closeNavbar.bind(this);
+        this.openAltaModal = this.openAltaModal.bind(this);
+        this.closeAltaModal = this.closeAltaModal.bind(this); // 🛑 BINDING DE LA FUNCIÓN DE CIERRE
     }
 
     async componentDidMount() {
@@ -136,6 +133,18 @@ class Admin_usuarios extends Component {
         if (message) {
             toast.success(message);
             localStorage.removeItem('showToast');
+        }
+    }
+
+    // 🛑 Lógica para recargar la tabla después de un registro exitoso
+    componentDidUpdate(prevProps, prevState) {
+        if (this.state.shouldReloadTable && !prevState.shouldReloadTable) {
+            // Asumiendo que DataTableComponent o la tabla necesita un estado para recargar.
+            // Si tu DataTableComponent tiene su propia función de fetch, llámala aquí.
+            console.log("TRIGGER: Recargando datos de la tabla de usuarios...");
+            // Podrías llamar a una función aquí para recargar los datos
+            // this.fetchTrabajadores(); 
+            this.setState({ shouldReloadTable: false });
         }
     }
 
@@ -157,11 +166,9 @@ class Admin_usuarios extends Component {
         }
     }
 
-    // Lógica adaptada para usar el estado, manteniendo el manejo de 'onclick' para el UI
     openNavbar() {
         this.setState({ isNavOpen: true });
         if (this.ui.current) {
-            // Esto replica la lógica original que cierra el menú al hacer clic fuera
             this.ui.current.onclick = this.closeNavbar; 
         }
     }
@@ -173,12 +180,29 @@ class Admin_usuarios extends Component {
         }
     }
     
+    // 🛑 NUEVAS FUNCIONES PARA EL MODAL
+    openAltaModal() {
+        this.setState({ isAltaModalOpen: true });
+    }
+
+    closeAltaModal(shouldReload = false) {
+        // 🛑 ESTO ES LO CRÍTICO: CERRAR EL MODAL
+        this.setState({ 
+            isAltaModalOpen: false,
+            shouldReloadTable: shouldReload, // Si viene 'true', marcamos para recargar
+        });
+        if (shouldReload) {
+            //toast.success("Usuario creado. Recargando lista...");
+        }
+    }
+    // FIN NUEVAS FUNCIONES PARA EL MODAL
+
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     render() {
-        const { isNavOpen, isAuthenticated, rol } = this.state;
+        const { isAuthenticated, rol, isAltaModalOpen, shouldReloadTable } = this.state;
         
         if (!isAuthenticated) {
             return (
@@ -191,18 +215,17 @@ class Admin_usuarios extends Component {
         const isOperario = rol === 'Operario';
 
         return (
-            // Contenedor Principal: Usa el layout de h-screen y overflow-hidden
             <div className="bg-gray-100 font-sans h-screen overflow-hidden"> 
                 <Toaster />
 
                 {/* ----------------- Sidebar (Sidenavbar) ----------------- */}
+                {/* ... (código del Sidebar que usa isNavOpen) ... */}
                 <div
-                    // Clases para el layout y la transición del sidebar
                     className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out bg-gray-900 shadow-xl
-                        ${isNavOpen ? 'translate-x-0 w-64' : '-translate-x-full w-0'} md:translate-x-0 md:w-64`}
+                        ${this.state.isNavOpen ? 'translate-x-0 w-64' : '-translate-x-full w-0'} md:translate-x-0 md:w-64`}
                     ref={this.sidenav}
                 >
-                    {/* Estilo de fondo con gradiente y mock image del CorteCaja */}
+                    {/* ... (contenido del sidebar) ... */}
                     <div className="p-4 flex flex-col h-full text-white" style={{ 
                         backgroundImage: "linear-gradient(rgba(18, 39, 75, 0.9), rgba(18, 39, 75, 0.9)), url('https://placehold.co/600x400/12274B/ffffff?text=Tienda')",
                         backgroundSize: 'cover', backgroundPosition: 'center'
@@ -210,7 +233,6 @@ class Admin_usuarios extends Component {
                         
                         <div className="flex items-center justify-between mb-8" ref={this.storeButton}>
                             <h1 className="text-xl font-bold text-yellow-300">Super Abarrotes</h1>
-                            {/* Botón para cerrar en móvil */}
                             <button onClick={this.closeNavbar} className="md:hidden p-2 rounded-full hover:bg-white/10 transition-colors">
                                 <X className="w-6 h-6" />
                             </button>
@@ -218,7 +240,6 @@ class Admin_usuarios extends Component {
                         
                         <ul className="space-y-3 flex-grow" ref={this.sidenavmenu}>
                             
-                            {/* Opciones de Navegación Estilizadas */}
                             <li className="flex items-center p-3 rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors"
                                 onClick={() => window.location.replace('/punto_de_venta')}>
                                 <ShoppingBag className="w-5 h-5 mr-3" />
@@ -235,7 +256,6 @@ class Admin_usuarios extends Component {
                                 <span>Compras</span>
                             </li>
                             
-                            {/* Opción ACTUAL (Administración de Usuarios) - Estilo Activo */}
                             <li className="flex items-center p-3 rounded-lg bg-indigo-700 text-yellow-300 transition-colors"
                                 onClick={this.closeNavbar} >
                                 <Users className="w-5 h-5 mr-3" />
@@ -256,7 +276,6 @@ class Admin_usuarios extends Component {
                             <Link to="/login">  </Link>
                         </ul>    
                         
-                        {/* Logout */}
                         <div className="mt-8 pt-4 border-t border-indigo-700">
                             <div className="flex items-center p-3 rounded-lg hover:bg-red-700/50 cursor-pointer transition-colors">
                                 <LogOut className="w-5 h-5 mr-3" />
@@ -266,22 +285,27 @@ class Admin_usuarios extends Component {
                     </div>
                 </div>
 
+
                 {/* ----------------- Contenido Principal (UI) ----------------- */}
                 <div
-                    // Clases para layout y scroll interno
-                    className={`p-4 md:p-8 transition-all duration-300 md:ml-64 h-screen overflow-y-auto ${isNavOpen ? 'opacity-50 md:opacity-100' : ''}`}
+                    className={`p-4 md:p-8 transition-all duration-300 md:ml-64 h-screen overflow-y-auto relative z-50`}
                     ref={this.ui}
                 >
                     
                     {/* Header y Headbar (Sticky) */}
                     <div className="bg-white rounded-xl shadow-lg mb-6 p-4 sticky top-0 z-10 border-b-4 border-yellow-500">
-                        
+                         
+                         <div className="md:hidden flex items-center justify-start pb-4">
+                            <button onClick={this.openNavbar} className="p-2 rounded-lg text-gray-800 hover:bg-gray-100 transition-colors">
+                                <Menu className="w-6 h-6" />
+                            </button>
+                        </div>
+
                         <div id="header" className="flex items-center justify-between pt-4 border-t border-gray-100">
                             
                             <div className="flex items-center">
-                                {/* Título de la Sección */}
                                 <h2 className="text-2xl font-extrabold text-indigo-800 flex items-center">
-                                    <Users className="w-7 h-7 mr-2 text-yellow-500"  />
+                                    <Users className="w-7 h-7 mr-2 text-yellow-500"  />
                                     Administración de Usuarios
                                 </h2>
                             </div>
@@ -291,11 +315,16 @@ class Admin_usuarios extends Component {
                                 <span className="font-semibold" style={{ color: '#000000' }}><GetUser /></span>
                             </div>
                         </div>
-                         <div id="headbar" className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div id="headbar" className="flex items-center justify-between pt-4 border-t border-gray-100">
                             {/* Opciones (Botón de Alta) */}
                             <div id='opciones' className="flex items-center">
-                                {/* Estilo del botón de Alta/Acción (Verde) */}
-                                <AltaUsuarios className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-700 transition duration-150 transform hover:scale-[1.02]" />
+                                {/* 🛑 BOTÓN QUE ABRE EL MODAL 🛑 */}
+                                <button
+                                    onClick={this.openAltaModal} // 👈 LLAMA A LA FUNCIÓN QUE CAMBIA EL ESTADO
+                                    className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-700 transition duration-150 transform hover:scale-[1.02]"
+                                >
+                                    + Alta de Usuario
+                                </button>
                             </div>
                         </div> 
                         
@@ -304,7 +333,6 @@ class Admin_usuarios extends Component {
                     
                     {/* Contenido Principal */}
                     {isOperario ? (
-                        // Mensaje de No Permisos (Estilo de Alerta)
                         <div className="p-8 mt-8 bg-red-100 rounded-xl shadow-lg border-l-4 border-red-500 text-center">
                             <p id="noPermisos" className="text-3xl font-extrabold text-red-800">
                                 Error: No tienes permisos para acceder a esta sección
@@ -312,15 +340,20 @@ class Admin_usuarios extends Component {
                             <p className="text-gray-600 mt-2">Solo los administradores pueden gestionar usuarios.</p>
                         </div>
                     ) : (
-                        // Contenedor de la Tabla de Datos
                         <div className="p-4 bg-white rounded-xl shadow-lg">
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Usuarios del Sistema</h3>
-                            {/* Se asume que DataTableComponent ya está estilizado internamente o necesita su propio diseño */}
-                            <DataTableComponent></DataTableComponent>
+                            {/* Pasamos shouldReloadTable para que el componente de datos decida si debe refetch */}
+                            <DataTableComponent shouldReload={shouldReloadTable}></DataTableComponent> 
                         </div>
                     )}
 
                 </div>
+                
+                {/* 🛑 RENDERIZADO CONDICIONAL DEL MODAL 🛑 */}
+                {isAltaModalOpen && (
+                    <AltaUsuariosModal closeModal={this.closeAltaModal} />
+                )}
+
             </div>
         );
     }

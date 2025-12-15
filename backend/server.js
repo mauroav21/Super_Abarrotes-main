@@ -95,37 +95,55 @@ db.connect((err) => {
 */
 
 app.post('/register_user', (req, res) => {
+    // 🛑 Modificación: Eliminamos la variable sql_password
     const sql = "INSERT INTO trabajadores(`nombre`,`apellido_paterno`,`apellido_materno`,`usuario`,`contrasena`,`rol`) VALUES (?)";
     const sql_select = "SELECT * from trabajadores where usuario=?";
-    const sql_password = "INSERT INTO contrasena(`encriptada`,`texto_plano`) VALUES (?,?)";
-    const values = [req.body.usuario.toLowerCase()];
-    db.query(sql_select, values, (err, data) => {
+    
+    // Si 'salt' no está definida globalmente, la definimos aquí:
+    const saltRounds = 10; 
+
+    // Consulta 1: Verificar si el usuario ya existe
+    const values_select = [req.body.usuario.toLowerCase()];
+    db.query(sql_select, values_select, (err, data) => {
         if(err) return res.json({Error: "Error al buscar el usuario"});
-        if(data.length>0){
+        if(data.length > 0){
             return res.json({Error: "El USUARIO ya está REGISTRADO"})
         }
-        bcrypt.hash(req.body.contrasena, salt, (err, hash) => {
-            if(err)return res.json({Error: "Error al encriptar la contraseña"});
-            const values = [req.body.nombre.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase()), 
+
+        // Paso 2: Encriptar la contraseña
+        bcrypt.hash(req.body.contrasena, saltRounds, (err, hash) => {
+            if(err) return res.json({Error: "Error al encriptar la contraseña"});
+            
+            // Valores para insertar en la tabla trabajadores
+            const values_trabajador = [
+                req.body.nombre.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase()), 
                 req.body.apellido_paterno.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase()), 
                 req.body.apellido_materno.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase()), 
-                req.body.usuario.toLowerCase(), hash, req.body.rol];
-            db.query(sql, [values], (err, result) => {
-                if(err) return res.json({Error: "Error al registrar el usuario"});
-                db.query(sql_password, [hash, req.body.contrasena], (err, result) => {
-                    if(err) return res.json({Error: "Error al registrar la contraseña"});
-                    if(result.affectedRows > 0){
-                        return res.status(200).json({ message: 'Usuario registrado exitosamente' });
-                    }else{
-                        console.log(err);
-                    }
-                })
+                req.body.usuario.toLowerCase(), 
+                hash, // <-- El hash ya va a la columna 'contrasena' de trabajadores
+                req.body.rol
+            ];
+            
+            // Consulta 3: Insertar en la tabla trabajadores
+            db.query(sql, [values_trabajador], (err, result_trabajador) => {
+                if(err) {
+                    console.error("Error al insertar en trabajadores:", err);
+                    return res.json({Error: "Error al registrar el usuario"});
+                }
+
+                // 🛑 ¡ESTA ES LA CLAVE! El proceso termina aquí con éxito.
+                // Eliminamos el db.query(sql_password, ...) que causaba el fallo.
+                
+                if (result_trabajador.affectedRows > 0) {
+                    return res.status(200).json({ message: 'Usuario registrado exitosamente' });
+                } else {
+                    console.error("Fallo al insertar trabajador: 0 filas afectadas.");
+                    return res.json({Error: "El registro del trabajador falló (sin filas afectadas)."});
+                }
             })
         })
-    }
-    )
-})
-
+    });
+});
 
 app.post('/update_user', (req, res) => {
 
