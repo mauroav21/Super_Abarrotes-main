@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import PropTypes from 'prop-types';
 import toast, { Toaster } from 'react-hot-toast';
 import 'tailwindcss/tailwind.css'; // Aseguramos Tailwind
+import download from '../assets/inventario/download.svg';
 
 // ----------------------------------------------------------------------
 // MOCK COMPONENTS & HELPERS (Se asume que existen y se mantienen como lógica)
@@ -14,6 +15,7 @@ import GetUser from '../GetUser';
 import Logout from '../Logout';
 import AltaProductos from './AltaProductos';
 import ListaDeFaltantes from './ListaDeFaltantes';
+import Faltantes from './Faltantes';
 
 // ----------------------------------------------------------------------
 // SVG ICONS (Copiados de CorteCaja.js para mantener la línea de diseño)
@@ -316,6 +318,7 @@ class Inventario extends Component {
                             <div className='flex space-x-4' id='opciones'>
                                 <AltaProductos/>
                                 <ListaDeFaltantes/>
+                                
                             </div>
                         </div>
                     </div>
