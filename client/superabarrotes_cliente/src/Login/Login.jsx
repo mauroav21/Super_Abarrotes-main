@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import ellipse from '../assets/login/ellipse.svg'
-import tienda from '../assets/login/tienda.svg'
+import tienda from '../assets/login/tienda.webp'
 import logo from '../assets/login/logo.svg'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
