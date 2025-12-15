@@ -128,81 +128,81 @@ app.post('/register_user', (req, res) => {
 
 
 app.post('/update_user', (req, res) => {
-    
+
     const { usuario, nombre, apellido_paterno, apellido_materno, rol, contrasena } = req.body;
-    
+
     // Función para capitalizar el nombre y apellidos
     const capitalize = (str) => str.toLowerCase().replace(/(^|\s)\S/gu, c => c.toUpperCase());
 
     // 1. Datos base a actualizar (sin contraseña)
     let sqlBase = `
-        UPDATE trabajadores 
+        UPDATE trabajadores
         SET Nombre=?, apellido_paterno=?, apellido_materno=?, rol=?
     `;
     let values = [
-        capitalize(nombre), 
-        capitalize(apellido_paterno), 
-        capitalize(apellido_materno), 
+        capitalize(nombre),
+        capitalize(apellido_paterno),
+        capitalize(apellido_materno),
         rol
     ];
     let sqlWhere = ' WHERE usuario=?';
 
     // 2. Comprobar si se envió una nueva contraseña (campo no vacío)
     if (contrasena && contrasena.length > 0) {
-        
-        // --- LÓGICA DE ACTUALIZACIÓN DE CONTRASEÑA ---
-        
+
+        // ... (Tu lógica de Bcrypt con Contraseña - Esta ya era correcta)
         bcrypt.hash(contrasena, salt, (err, hash) => {
             if (err) {
                 console.error("Bcrypt hash error:", err);
                 return res.status(500).json({ Error: "Error al encriptar la contraseña" });
             }
 
-            // A) Construir la consulta SQL para actualizar TODOS los campos, incluyendo la contraseña
             const sqlComplete = sqlBase + ', contrasena=?' + sqlWhere;
-            
-            // B) Añadir el hash y el usuario a los valores
             const finalValues = [...values, hash, usuario];
 
-            // C) Ejecutar la actualización (una sola consulta)
             db.query(sqlComplete, finalValues, (err, result) => {
                 if (err) {
                     console.error("Database error (Update ALL):", err);
                     return res.status(500).json({ Error: "Error al actualizar el usuario y la contraseña" });
                 }
-                if (result.affectedRows > 0) {
-                    // Si el usuario fue encontrado y actualizado
+                // Si affectedRows > 0, significa que el usuario existe y se actualizó algo (la contraseña seguro)
+                if (result.affectedRows > 0) { 
                     return res.status(200).json({ message: 'Usuario y contraseña actualizados con éxito' });
                 } else {
-                    // Si el usuario no fue encontrado (WHERE usuario=?)
                     return res.status(404).json({ Error: "Usuario no encontrado para actualizar" });
                 }
             });
         });
 
     } else {
-        
-        // --- LÓGICA DE ACTUALIZACIÓN SIN CONTRASEÑA ---
-        
-        // A) La consulta SQL es solo para datos de usuario
+
+        // --- LÓGICA DE ACTUALIZACIÓN SIN CONTRASEÑA (CORREGIDA) ---
+
         const sqlUpdateData = sqlBase + sqlWhere;
-        
-        // B) El hash no se incluye, solo los valores y el usuario
         const finalValues = [...values, usuario];
 
-        // C) Ejecutar la actualización (una sola consulta)
         db.query(sqlUpdateData, finalValues, (err, result) => {
             if (err) {
                 console.error("Database error (Update Data Only):", err);
                 return res.status(500).json({ Error: "Error al actualizar los datos del usuario" });
             }
-            if (result.affectedRows > 0) {
+
+            // Usamos changedRows para verificar si hubo un cambio real.
+            if (result.changedRows > 0) {
+                // Éxito: El registro fue modificado.
                 return res.status(200).json({ message: 'Datos de usuario actualizados con éxito (contraseña no cambiada)' });
+            } 
+            
+            // Si affectedRows fue 0, puede ser que el usuario no exista.
+            // Si affectedRows fue 1, pero changedRows es 0, significa que existe pero no hubo cambios.
+            // Para cubrir ambos casos, podemos ver si fue afectado para distinguir:
+            
+            if (result.affectedRows > 0) { 
+                // El usuario existe, pero changedRows fue 0. NO HAY CAMBIOS.
+                return res.status(200).json({ message: 'No se detectaron cambios en los datos del usuario.' });
             } else {
-                // Si el usuario existe pero no se hizo un cambio (ej. nombre era el mismo)
-                // O el usuario no fue encontrado
-                 return res.status(200).json({ message: 'Datos de usuario actualizados con éxito (contraseña no cambiada)' });
-                // Alternativamente: return res.status(404).json({ Error: "Usuario no encontrado o sin cambios" });
+                // El usuario no existe (ni affectedRows ni changedRows son > 0)
+                return res.status(404).json({ Error: "Usuario no encontrado para actualizar" });
             }
         });
     }
