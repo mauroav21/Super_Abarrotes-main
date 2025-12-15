@@ -816,16 +816,32 @@ app.post('/modificarProveedor', (req, res) => {
     });
 });
 
-// --- Eliminar proveedor ---
+// --- Eliminar proveedor (CORREGIDO PARA MANEJAR CLAVE FORÁNEA) ---
 app.delete('/deleteProveedor/:codigo', (req, res) => {
     const { codigo } = req.params;
     const sql = 'DELETE FROM proveedores WHERE codigo = ?';
 
     db.query(sql, [codigo], (err, result) => {
         if (err) {
-            console.error('Error al eliminar proveedor:', err);
-            return res.status(500).json({ Error: "Error al eliminar el proveedor" });
+            // 🛑 INTERCEPTACIÓN DEL ERROR DE CLAVE FORÁNEA (ER_ROW_IS_REFERENCED_2)
+            // El código de error de MySQL para Foreign Key Constraint Fail es 1451
+            if (err.errno === 1451 || err.code === 'ER_ROW_IS_REFERENCED_2') {
+                console.warn(`Intento de eliminar proveedor ${codigo} falló por FK.`);
+                
+                // ⭐️ Devuelve un error 409 (Conflicto) con un mensaje amigable
+                return res.status(409).json({ 
+                    Error: "No se puede eliminar este proveedor, existen compras asociadas.",
+                    message: `El proveedor con código ${codigo} no puede eliminarse porque existen compras asociadas.`,
+                    developer_message: "Foreign Key Constraint Failed"
+                });
+            }
+            
+            // Si es otro tipo de error de MySQL, lo manejamos como 500
+            console.error('Error interno al eliminar proveedor:', err);
+            return res.status(500).json({ Error: "Error interno al eliminar el proveedor." });
         }
+        
+        // El resto del código de éxito permanece igual
         if (result.affectedRows === 0) {
             return res.status(404).json({ Error: "Proveedor no encontrado" });
         }
