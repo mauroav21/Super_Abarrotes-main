@@ -280,37 +280,87 @@ app.post('/insertarProducto',(req, res) => {
     })
 })
 
-app.post('/modificarProducto',(req, res) => {
-    const sql =" UPDATE productos set nombre=?, precio = ? , cantidad = ? , cantidad_minima = ? WHERE codigo = ?";
+// Servidor: app.post('/modificarProducto', ...)
+
+app.post('/modificarProducto', (req, res) => {
+    
+    // ----------------------------------------------------
+    // 1. LIMPIEZA Y CONVERSIÓN DE DATOS DE ENTRADA (CORREGIDO)
+    // ----------------------------------------------------
+    
+    // Usamos Number() para cantidad y cantidad_minima para la validación de isInteger.
+    // Aunque el frontend ya envía enteros, es mejor forzar a INT para evitar errores sutiles.
+    const cantidad_stock = Number(req.body.cantidad); // Este valor viene del campo de sólo lectura
+    const cantidad_minima = Number(req.body.cantidad_minima);
+    const precio_valor = Number(req.body.precio); // Usamos Number para mantener decimales si existen
+
+    // Nombre
+    const nombre_formateado = req.body.nombre.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+
+    // ----------------------------------------------------
+    // 2. CONSULTAS SQL y VALORES (USANDO LAS VARIABLES CONVERTIDAS)
+    // ----------------------------------------------------
+
+    const sql = " UPDATE productos set nombre=?, precio = ? , cantidad = ? , cantidad_minima = ? WHERE codigo = ?";
     const sql_select_codigo = "SELECT * from productos where codigo=?";
     const sql_select_nombre = "SELECT * from productos where nombre=?";
-    const num_values = [Number(req.body.codigo), Number(req.body.cantidad), Number(req.body.cantidad_minima), Number(req.body.precio)];
-    const values = [req.body.nombre.toLowerCase().replace(/\b\w/g, char => char.toUpperCase()),req.body.precio,req.body.cantidad, req.body.cantidad_minima, req.body.codigo];
-    db.query(sql_select_codigo, [req.body.codigo], (err,data) => {
-        console.log(data.sql);
-        if(data.length>1){
-            return res.json({Error: "El CÓDIGO del producto YA está REGISTRADO"})
-        }else{
-            const nombre_original = data[0].nombre;
-            db.query(sql_select_nombre, [req.body.nombre], (err, data) => {
-                if(data.length>0 && nombre_original != req.body.nombre){
-                    console.log(data.sql);
-                    return res.json({Error: "El NOMBRE del producto YA está REGISTRADO"});
-                }else{
-                    if(Number.isInteger(num_values[0]) && Number.isInteger(num_values[1]) && Number.isInteger(num_values[2])){
-                        db.query(sql, values, (err,data) => {
-                            if(err) return res.json({Error: "Ha habido un error al insertar el producto"});
-                            return res.json({Status: "Exito"});
-                        })
-                    }else{
-                        return res.json({Error: "Por favor, ingrese cantidades ENTERAS"});
-                    }
-                }
-            })
-        }
-    })
-})
 
+    // 🛑 ARREGLO CRÍTICO: Usar las variables NUMÉRICAS 'cantidad_minima' y 'precio_valor'
+    const values = [
+        nombre_formateado,
+        precio_valor,        // <-- AHORA USA EL NÚMERO (FLOAT/INT)
+        cantidad_stock,      // <-- AHORA USA EL NÚMERO (INT)
+        cantidad_minima,     // <-- AHORA USA EL NÚMERO (INT)
+        req.body.codigo
+    ];
+
+    // ----------------------------------------------------
+    // 3. LÓGICA DE BASE DE DATOS Y VALIDACIÓN
+    // ----------------------------------------------------
+
+    db.query(sql_select_codigo, [req.body.codigo], (err,data) => {
+        if (err) return res.json({Error: "Error al buscar el código."});
+        if (data.length === 0) {
+            return res.json({Error: "Producto no encontrado."});
+        }
+        
+        const nombre_original = data[0].nombre;
+        
+        db.query(sql_select_nombre, [req.body.nombre], (err, data_nombre) => {
+            if (err) return res.json({Error: "Error al buscar el nombre."});
+
+            if (data_nombre.length > 0 && nombre_original.toLowerCase() !== req.body.nombre.toLowerCase()){
+                return res.json({Error: "El NOMBRE del producto YA está REGISTRADO"});
+            } else {
+                
+                // 🛑 ARREGLO CRÍTICO DE VALIDACIÓN: Usar las variables NUMÉRICAS
+                if (Number.isInteger(cantidad_stock) && Number.isInteger(cantidad_minima)) { 
+                    
+                    if (cantidad_stock < 0 || cantidad_minima < 0) {
+                        return res.json({Error: "Las cantidades (Stock y Mínima) no pueden ser negativas."});
+                    }
+                    
+                    // Ejecutar el UPDATE
+                    db.query(sql, values, (err, data_update) => {
+                        if (err) {
+                            console.error("Error al ejecutar UPDATE:", err);
+                            return res.json({Error: "Ha habido un error al actualizar el producto"});
+                        }
+                        
+                        if (data_update.affectedRows === 0) {
+                            return res.json({Status: "Exito", message: "No se detectaron cambios para guardar."});
+                        }
+                        
+                        return res.json({Status: "Exito", message: "Producto modificado con éxito."});
+                    });
+                } else {
+                    // Si falla la validación de enteros, es porque el valor NO ES ENTERO.
+                    return res.json({Error: "Por favor, ingrese cantidades ENTERAS (Stock y Cantidad Mínima)."});
+                }
+            }
+        });
+    });
+});
 
 const verifyUser = (req, res, next) => {
     const token = req.cookies.token;
