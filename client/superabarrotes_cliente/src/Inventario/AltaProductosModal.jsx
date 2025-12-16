@@ -146,7 +146,7 @@ function AltaProductosModal({ closeModal }) {
                             <InputGroup 
                                 label="Nombre del Producto" name="nombre" value={values.nombre} 
                                 onChange={handleChange} required={true} type="text" 
-                                placeholder="Ej: Tornillo M8x20mm"
+                                placeholder="Nombre Producto"
                                 disabled={loading}
                             />
 
@@ -155,7 +155,7 @@ function AltaProductosModal({ closeModal }) {
                                 <InputGroup 
                                     label="Código (EAN/UPC)" name="codigo" value={values.codigo} 
                                     onChange={handleChange} required={true} type="text"
-                                    placeholder="Solo números (Máx 13)"
+                                    placeholder="Codigo Numerico"
                                     disabled={loading}
                                 />
                                 
@@ -163,7 +163,7 @@ function AltaProductosModal({ closeModal }) {
                                 <InputGroup 
                                     label="Precio de Venta ($)" name="precio" value={values.precio} 
                                     onChange={handleChange} required={true} type="text"
-                                    placeholder="Ej: 15.50"
+                                    placeholder="Valor sin decimales"
                                     disabled={loading}
                                 />
                             </div>
@@ -173,7 +173,7 @@ function AltaProductosModal({ closeModal }) {
                                 <InputGroup 
                                     label="Stock Mínimo (Alerta)" name="cantidad_minima" value={values.cantidad_minima} 
                                     onChange={handleChange} required={true} type="text"
-                                    placeholder="Solo números enteros"
+                                    placeholder="Cantidad minima para aviso"
                                     disabled={loading}
                                 />
                                 
